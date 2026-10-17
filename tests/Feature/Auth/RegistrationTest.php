@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Enums\StatutCompte;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
 
@@ -49,10 +50,13 @@ class RegistrationTest extends TestCase
     {
         $response = $this->post(route('register.store'), $this->donneesInscription());
 
-        // Le compte est en attente : pas de connexion, retour à la page de connexion
+        // Le compte est en attente : pas de connexion, fenêtre « Inscription envoyée »
         $this->assertGuest();
-        $response->assertRedirect(route('login'));
-        $response->assertSessionHas('status');
+        $response->assertRedirect(route('register'));
+        $response->assertSessionHas('inscriptionEnvoyee', true);
+
+        $this->get(route('register'))
+            ->assertInertia(fn (Assert $page) => $page->where('inscriptionEnvoyee', true));
 
         $user = User::where('email', 'karim@example.com')->first();
 

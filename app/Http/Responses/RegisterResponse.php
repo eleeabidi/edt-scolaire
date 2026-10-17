@@ -9,8 +9,8 @@ use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
 
 /**
  * Après l'inscription, Fortify connecte automatiquement l'utilisateur.
- * Ici, le compte est EN_ATTENTE : on le déconnecte et on le renvoie
- * vers la page de connexion avec un message de confirmation.
+ * Ici, le compte est EN_ATTENTE : on le déconnecte et on revient sur
+ * l'inscription, qui affiche la fenêtre « Inscription envoyée ».
  */
 class RegisterResponse implements RegisterResponseContract
 {
@@ -24,9 +24,6 @@ class RegisterResponse implements RegisterResponseContract
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login')->with(
-            'status',
-            "Votre inscription a bien été envoyée. Vous recevrez un email dès que l'administrateur l'aura validée.",
-        );
+        return redirect()->route('register')->with('inscriptionEnvoyee', true);
     }
 }
