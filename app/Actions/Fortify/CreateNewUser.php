@@ -36,11 +36,6 @@ class CreateNewUser implements CreatesNewUsers
             'ecole_adresse' => ['required', 'string', 'max:255'],
             'ecole_ville' => ['required', 'string', 'max:255'],
             'ecole_telephone' => ['required', 'string', 'max:20'],
-        ], [], [
-            'ecole_nom' => "nom de l'école",
-            'ecole_adresse' => "adresse de l'école",
-            'ecole_ville' => "ville de l'école",
-            'ecole_telephone' => "téléphone de l'école",
         ])->validate();
 
         // Les deux enregistrements sont créés ensemble, ou pas du tout

@@ -83,6 +83,17 @@ class RegistrationTest extends TestCase
         $this->assertDatabaseCount('ecoles', 0);
     }
 
+    public function test_error_messages_are_in_french()
+    {
+        $this->post(route('register.store'), $this->donneesInscription(['ecole_nom' => '']))
+            ->assertSessionHasErrors(['ecole_nom' => "Le champ nom de l'école est obligatoire."]);
+
+        $this->post(route('register.store'), $this->donneesInscription([
+            'password' => 'seulementdeslettres',
+            'password_confirmation' => 'seulementdeslettres',
+        ]))->assertSessionHasErrors(['password' => 'Le champ mot de passe doit contenir au moins un chiffre.']);
+    }
+
     public function test_password_needs_letters_and_numbers()
     {
         $this->post(route('register.store'), $this->donneesInscription([

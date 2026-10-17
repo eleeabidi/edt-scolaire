@@ -154,7 +154,7 @@ class DirecteurController extends Controller
 
         $motif = $request->validate([
             'motif' => ['nullable', 'string', 'max:1000'],
-        ], [], ['motif' => 'motif'])['motif'] ?? null;
+        ])['motif'] ?? null;
 
         $directeur->update(['statut' => StatutCompte::Refuse, 'motif_refus' => $motif]);
         $directeur->notify(new InscriptionRefuseeNotification($motif));

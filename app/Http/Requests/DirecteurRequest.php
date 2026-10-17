@@ -33,21 +33,6 @@ class DirecteurRequest extends FormRequest
     }
 
     /**
-     * @return array<string, string>
-     */
-    public function attributes(): array
-    {
-        return [
-            'prenom' => 'prénom',
-            'telephone' => 'téléphone',
-            'ecole_nom' => "nom de l'école",
-            'ecole_adresse' => "adresse de l'école",
-            'ecole_ville' => "ville de l'école",
-            'ecole_telephone' => "téléphone de l'école",
-        ];
-    }
-
-    /**
      * Les informations du directeur.
      *
      * @return array<string, mixed>

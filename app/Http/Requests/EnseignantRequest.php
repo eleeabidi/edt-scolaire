@@ -32,17 +32,4 @@ class EnseignantRequest extends FormRequest
                 : ['exclude'],
         ];
     }
-
-    /**
-     * @return array<string, string>
-     */
-    public function attributes(): array
-    {
-        return [
-            'prenom' => 'prénom',
-            'telephone' => 'téléphone',
-            'specialite' => 'spécialité',
-            'ecole_id' => 'école',
-        ];
-    }
 }
