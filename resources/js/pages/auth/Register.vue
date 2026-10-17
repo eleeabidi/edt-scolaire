@@ -33,18 +33,32 @@ defineOptions({
     >
         <div class="grid gap-6">
             <div class="grid gap-2">
-                <Label for="name">Name</Label>
+                <Label for="nom">Nom</Label>
                 <Input
-                    id="name"
+                    id="nom"
                     type="text"
                     required
                     v-focus
                     :tabindex="1"
-                    autocomplete="name"
-                    name="name"
-                    placeholder="Full name"
+                    autocomplete="family-name"
+                    name="nom"
+                    placeholder="Nom"
                 />
-                <InputError :message="errors.name" />
+                <InputError :message="errors.nom" />
+            </div>
+
+            <div class="grid gap-2">
+                <Label for="prenom">Prénom</Label>
+                <Input
+                    id="prenom"
+                    type="text"
+                    required
+                    :tabindex="1"
+                    autocomplete="given-name"
+                    name="prenom"
+                    placeholder="Prénom"
+                />
+                <InputError :message="errors.prenom" />
             </div>
 
             <div class="grid gap-2">

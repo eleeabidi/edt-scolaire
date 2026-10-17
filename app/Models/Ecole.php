@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\Role;
+use Database\Factories\EcoleFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
+
+/**
+ * @property int $id
+ * @property string $nom
+ * @property string $adresse
+ * @property string $ville
+ * @property string $telephone
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
+#[Fillable(['nom', 'adresse', 'ville', 'telephone'])]
+class Ecole extends Model
+{
+    /** @use HasFactory<EcoleFactory> */
+    use HasFactory;
+
+    /**
+     * Le directeur qui dirige l'école (1–1).
+     *
+     * @return HasOne<User, $this>
+     */
+    public function directeur(): HasOne
+    {
+        return $this->hasOne(User::class)->where('role', Role::Directeur);
+    }
+
+    /**
+     * Les enseignants de l'école (0..*).
+     *
+     * @return HasMany<User, $this>
+     */
+    public function enseignants(): HasMany
+    {
+        return $this->hasMany(User::class)->where('role', Role::Enseignant);
+    }
+}
