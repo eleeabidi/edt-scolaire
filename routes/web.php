@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Role;
+use App\Http\Controllers\EnseignantController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -19,9 +20,10 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('role:admin')
         ->name('dashboard');
 
-    Route::inertia('enseignants', 'enseignants/Index')
-        ->middleware('role:admin,directeur')
-        ->name('enseignants.index');
+    // Gérer les enseignants
+    Route::resource('enseignants', EnseignantController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->middleware('role:admin,directeur');
 });
 
 require __DIR__.'/settings.php';

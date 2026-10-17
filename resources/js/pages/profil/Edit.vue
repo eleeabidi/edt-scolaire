@@ -6,7 +6,13 @@ import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -45,7 +51,9 @@ const user = computed(() => page.props.auth.user);
         <Card>
             <CardHeader>
                 <CardTitle>Mes informations</CardTitle>
-                <CardDescription>Modifiez vos informations personnelles.</CardDescription>
+                <CardDescription
+                    >Modifiez vos informations personnelles.</CardDescription
+                >
             </CardHeader>
             <CardContent>
                 <Form
@@ -57,7 +65,13 @@ const user = computed(() => page.props.auth.user);
                     <div class="grid gap-6 sm:grid-cols-2">
                         <div class="grid gap-2">
                             <Label for="nom">Nom</Label>
-                            <Input id="nom" name="nom" :default-value="user.nom" required autocomplete="family-name" />
+                            <Input
+                                id="nom"
+                                name="nom"
+                                :default-value="user.nom"
+                                required
+                                autocomplete="family-name"
+                            />
                             <InputError :message="errors.nom" />
                         </div>
 
@@ -102,11 +116,18 @@ const user = computed(() => page.props.auth.user);
                     <!-- Champ non modifiable : géré par le directeur ou l'admin -->
                     <div v-if="user.specialite" class="grid gap-2">
                         <Label for="specialite">Spécialité</Label>
-                        <Input id="specialite" :default-value="user.specialite" disabled />
+                        <Input
+                            id="specialite"
+                            :default-value="user.specialite"
+                            disabled
+                        />
                     </div>
 
                     <div>
-                        <Button :disabled="processing" data-test="update-profile-button">
+                        <Button
+                            :disabled="processing"
+                            data-test="update-profile-button"
+                        >
                             <Spinner v-if="processing" />
                             Enregistrer
                         </Button>
@@ -132,7 +153,9 @@ const user = computed(() => page.props.auth.user);
                     </div>
                     <div class="sm:col-span-2">
                         <dt class="text-muted-foreground">Adresse</dt>
-                        <dd class="font-medium">{{ ecole.adresse }}, {{ ecole.ville }}</dd>
+                        <dd class="font-medium">
+                            {{ ecole.adresse }}, {{ ecole.ville }}
+                        </dd>
                     </div>
                 </dl>
             </CardContent>
@@ -142,19 +165,28 @@ const user = computed(() => page.props.auth.user);
         <Card>
             <CardHeader>
                 <CardTitle>Changer mon mot de passe</CardTitle>
-                <CardDescription>Au moins 8 caractères, avec des lettres et des chiffres.</CardDescription>
+                <CardDescription
+                    >Au moins 8 caractères, avec des lettres et des
+                    chiffres.</CardDescription
+                >
             </CardHeader>
             <CardContent>
                 <Form
                     v-bind="ProfileController.updatePassword.form()"
                     :options="{ preserveScroll: true }"
                     reset-on-success
-                    :reset-on-error="['password', 'password_confirmation', 'current_password']"
+                    :reset-on-error="[
+                        'password',
+                        'password_confirmation',
+                        'current_password',
+                    ]"
                     class="grid gap-6"
                     v-slot="{ errors, processing }"
                 >
                     <div class="grid gap-2">
-                        <Label for="current_password">Mot de passe actuel</Label>
+                        <Label for="current_password"
+                            >Mot de passe actuel</Label
+                        >
                         <PasswordInput
                             id="current_password"
                             name="current_password"
@@ -179,7 +211,9 @@ const user = computed(() => page.props.auth.user);
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="password_confirmation">Confirmer le mot de passe</Label>
+                            <Label for="password_confirmation"
+                                >Confirmer le mot de passe</Label
+                            >
                             <PasswordInput
                                 id="password_confirmation"
                                 name="password_confirmation"
@@ -187,12 +221,17 @@ const user = computed(() => page.props.auth.user);
                                 autocomplete="new-password"
                                 :passwordrules="passwordRules"
                             />
-                            <InputError :message="errors.password_confirmation" />
+                            <InputError
+                                :message="errors.password_confirmation"
+                            />
                         </div>
                     </div>
 
                     <div>
-                        <Button :disabled="processing" data-test="update-password-button">
+                        <Button
+                            :disabled="processing"
+                            data-test="update-password-button"
+                        >
                             <Spinner v-if="processing" />
                             Changer le mot de passe
                         </Button>

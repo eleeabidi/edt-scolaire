@@ -27,7 +27,11 @@ const mainNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [];
 
     if (role.value === 'admin') {
-        items.push({ title: 'Tableau de bord', href: dashboard(), icon: LayoutGrid });
+        items.push({
+            title: 'Tableau de bord',
+            href: dashboard(),
+            icon: LayoutGrid,
+        });
     }
 
     if (role.value === 'admin' || role.value === 'directeur') {
