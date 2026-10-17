@@ -16,7 +16,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { edit } from '@/routes/profile';
 
 type Ecole = {
     nom: string;
@@ -32,9 +31,7 @@ defineProps<{
 }>();
 
 defineOptions({
-    layout: {
-        breadcrumbs: [{ title: 'Mon profil', href: edit() }],
-    },
+    layout: { titre: 'Mon profil' },
 });
 
 const page = usePage();

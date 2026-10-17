@@ -22,9 +22,7 @@ const props = defineProps<{
 }>();
 
 defineOptions({
-    layout: {
-        breadcrumbs: [{ title: 'Directeurs', href: index() }],
-    },
+    layout: { titre: 'Directeurs' },
 });
 
 // --- Onglets par statut ---

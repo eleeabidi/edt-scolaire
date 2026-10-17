@@ -21,9 +21,7 @@ const props = defineProps<{
 }>();
 
 defineOptions({
-    layout: {
-        breadcrumbs: [{ title: 'Enseignants', href: index() }],
-    },
+    layout: { titre: 'Enseignants' },
 });
 
 // --- Recherche et filtre (rechargés automatiquement) ---

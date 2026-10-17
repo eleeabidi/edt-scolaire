@@ -48,7 +48,6 @@ class HandleInertiaRequests extends Middleware
             'inscriptionsEnAttente' => fn () => $request->user()?->isAdmin()
                 ? User::where('role', Role::Directeur)->where('statut', StatutCompte::EnAttente)->count()
                 : 0,
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }
 }
