@@ -70,7 +70,7 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'role' => Role::Enseignant,
-            'ecole_id' => $ecole?->id ?? Ecole::factory(),
+            'ecole_id' => $ecole->id ?? Ecole::factory(),
             'specialite' => fake()->randomElement(['Mathématiques', 'Français', 'Arabe', 'Anglais', 'Sciences', 'Histoire-Géographie', 'Éducation physique']),
         ]);
     }
