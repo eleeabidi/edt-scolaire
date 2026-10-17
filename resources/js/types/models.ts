@@ -17,6 +17,25 @@ export type Enseignant = {
     ecole: string | null;
 };
 
+export type Ecole = {
+    nom: string;
+    adresse: string;
+    ville: string;
+    telephone: string;
+};
+
+export type Directeur = {
+    id: number;
+    nom: string;
+    prenom: string;
+    email: string;
+    telephone: string | null;
+    statut: User['statut'];
+    motif_refus: string | null;
+    date_creation: string | null;
+    ecole: Ecole | null;
+};
+
 // Résultat paginé renvoyé par Laravel (->paginate())
 export type Pagination<T> = {
     data: T[];

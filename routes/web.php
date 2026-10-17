@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Role;
+use App\Http\Controllers\DirecteurController;
 use App\Http\Controllers\EnseignantController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,17 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('enseignants', EnseignantController::class)
         ->only(['index', 'store', 'update', 'destroy'])
         ->middleware('role:admin,directeur');
+
+    // Gérer les directeurs (Admin)
+    Route::middleware('role:admin')->group(function () {
+        Route::resource('directeurs', DirecteurController::class)
+            ->only(['index', 'show', 'store', 'update', 'destroy']);
+
+        Route::post('directeurs/{directeur}/valider', [DirecteurController::class, 'valider'])
+            ->name('directeurs.valider');
+        Route::post('directeurs/{directeur}/refuser', [DirecteurController::class, 'refuser'])
+            ->name('directeurs.refuser');
+    });
 });
 
 require __DIR__.'/settings.php';

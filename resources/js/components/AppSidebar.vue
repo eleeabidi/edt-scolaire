@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, UserRound, Users } from '@lucide/vue';
+import { LayoutGrid, School, UserRound, Users } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,6 +15,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard, home } from '@/routes';
+import { index as directeurs } from '@/routes/directeurs';
 import { index as enseignants } from '@/routes/enseignants';
 import { edit as profil } from '@/routes/profile';
 import type { NavItem } from '@/types';
@@ -31,6 +32,15 @@ const mainNavItems = computed<NavItem[]>(() => {
             title: 'Tableau de bord',
             href: dashboard(),
             icon: LayoutGrid,
+        });
+    }
+
+    if (role.value === 'admin') {
+        items.push({
+            title: 'Directeurs',
+            href: directeurs(),
+            icon: School,
+            badge: page.props.inscriptionsEnAttente,
         });
     }
 
