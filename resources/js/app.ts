@@ -9,6 +9,8 @@ void createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
         switch (true) {
+            case name === 'Erreur':
+                return null;
             case name.startsWith('auth/'):
                 return AuthLayout;
             default:

@@ -8,6 +8,8 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -30,4 +32,20 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Pages d'erreur aux couleurs du site (en local, les erreurs 500 gardent
+        // la page détaillée de Laravel, plus utile pour corriger un bug)
+        $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
+            $statut = $response->getStatusCode();
+            $statuts = app()->isLocal() ? [403, 404, 409] : [403, 404, 409, 500, 503];
+
+            if (! in_array($statut, $statuts, true) || $request->expectsJson()) {
+                return $response;
+            }
+
+            return Inertia::render('Erreur', [
+                'statut' => $statut,
+                'message' => $statut === 409 ? $e->getMessage() : null,
+            ])->toResponse($request)->setStatusCode($statut);
+        });
     })->create();

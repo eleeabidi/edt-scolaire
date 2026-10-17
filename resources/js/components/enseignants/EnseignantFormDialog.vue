@@ -87,13 +87,23 @@ function enregistrer() {
                 <div class="grid gap-5 sm:grid-cols-2">
                     <div class="grid gap-2">
                         <Label for="ens-nom">Nom</Label>
-                        <Input id="ens-nom" v-model="form.nom" required />
+                        <Input
+                            id="ens-nom"
+                            placeholder="Trabelsi"
+                            v-model="form.nom"
+                            required
+                        />
                         <InputError :message="form.errors.nom" />
                     </div>
 
                     <div class="grid gap-2">
                         <Label for="ens-prenom">Prénom</Label>
-                        <Input id="ens-prenom" v-model="form.prenom" required />
+                        <Input
+                            id="ens-prenom"
+                            placeholder="Leila"
+                            v-model="form.prenom"
+                            required
+                        />
                         <InputError :message="form.errors.prenom" />
                     </div>
                 </div>
@@ -102,6 +112,7 @@ function enregistrer() {
                     <Label for="ens-email">Email</Label>
                     <Input
                         id="ens-email"
+                        placeholder="nom@ecole.tn"
                         v-model="form.email"
                         type="email"
                         required
@@ -114,6 +125,7 @@ function enregistrer() {
                         <Label for="ens-telephone">Téléphone</Label>
                         <Input
                             id="ens-telephone"
+                            placeholder="+216 00 000 000"
                             v-model="form.telephone"
                             type="tel"
                         />
@@ -126,7 +138,7 @@ function enregistrer() {
                             id="ens-specialite"
                             v-model="form.specialite"
                             required
-                            placeholder="Ex. : Mathématiques"
+                            placeholder="Mathématiques"
                         />
                         <InputError :message="form.errors.specialite" />
                     </div>
@@ -139,7 +151,7 @@ function enregistrer() {
                         id="ens-ecole"
                         v-model="form.ecole_id"
                         required
-                        class="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+                        class="h-12 w-full rounded-md border border-input bg-white px-4 text-[15px] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     >
                         <option value="" disabled>Choisir une école</option>
                         <option
@@ -153,7 +165,7 @@ function enregistrer() {
                     <InputError :message="form.errors.ecole_id" />
                 </div>
 
-                <DialogFooter class="gap-2">
+                <DialogFooter class="gap-3">
                     <Button
                         type="button"
                         variant="outline"

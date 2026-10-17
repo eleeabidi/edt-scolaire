@@ -180,6 +180,7 @@ class DirecteurController extends Controller
             'statut' => $directeur->statut->value,
             'motif_refus' => $directeur->motif_refus,
             'date_creation' => $directeur->created_at?->format('d/m/Y'),
+            'date_creation_longue' => $directeur->created_at?->translatedFormat('j F Y à H:i'),
             'ecole' => $directeur->ecole?->only(['nom', 'adresse', 'ville', 'telephone']),
         ];
     }

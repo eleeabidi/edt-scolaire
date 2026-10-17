@@ -83,6 +83,19 @@ class EnseignantTest extends TestCase
                 ->where('enseignants.data.0.nom', 'Zitouni'));
     }
 
+    public function test_list_can_be_filtered_by_status()
+    {
+        $directeur = User::factory()->directeur()->create();
+        User::factory(2)->enseignant($directeur->ecole)->create();
+        User::factory()->enseignant($directeur->ecole)->statut(StatutCompte::Desactive)->create();
+
+        $this->actingAs($directeur)
+            ->get(route('enseignants.index', ['statut' => 'DESACTIVE']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('enseignants.total', 1)
+                ->where('ecoleNom', $directeur->ecole->nom));
+    }
+
     public function test_directeur_adds_a_teacher_in_his_school_with_a_temporary_password()
     {
         Notification::fake();

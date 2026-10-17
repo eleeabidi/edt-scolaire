@@ -91,18 +91,28 @@ function enregistrer() {
             </DialogHeader>
 
             <form class="grid gap-5" @submit.prevent="enregistrer">
-                <p class="text-sm font-semibold">Le directeur</p>
+                <p class="text-sm font-semibold text-primary">Le directeur</p>
 
                 <div class="grid gap-5 sm:grid-cols-2">
                     <div class="grid gap-2">
                         <Label for="dir-nom">Nom</Label>
-                        <Input id="dir-nom" v-model="form.nom" required />
+                        <Input
+                            id="dir-nom"
+                            placeholder="Mansour"
+                            v-model="form.nom"
+                            required
+                        />
                         <InputError :message="form.errors.nom" />
                     </div>
 
                     <div class="grid gap-2">
                         <Label for="dir-prenom">Prénom</Label>
-                        <Input id="dir-prenom" v-model="form.prenom" required />
+                        <Input
+                            id="dir-prenom"
+                            placeholder="Hédi"
+                            v-model="form.prenom"
+                            required
+                        />
                         <InputError :message="form.errors.prenom" />
                     </div>
 
@@ -110,6 +120,7 @@ function enregistrer() {
                         <Label for="dir-email">Email</Label>
                         <Input
                             id="dir-email"
+                            placeholder="nom@ecole.tn"
                             v-model="form.email"
                             type="email"
                             required
@@ -121,6 +132,7 @@ function enregistrer() {
                         <Label for="dir-telephone">Téléphone</Label>
                         <Input
                             id="dir-telephone"
+                            placeholder="+216 00 000 000"
                             v-model="form.telephone"
                             type="tel"
                         />
@@ -128,12 +140,13 @@ function enregistrer() {
                     </div>
                 </div>
 
-                <p class="text-sm font-semibold">Son école</p>
+                <p class="text-sm font-semibold text-primary">L'école</p>
 
                 <div class="grid gap-2">
                     <Label for="dir-ecole-nom">Nom de l'école</Label>
                     <Input
                         id="dir-ecole-nom"
+                        placeholder="École Avicenne"
                         v-model="form.ecole_nom"
                         required
                     />
@@ -144,6 +157,7 @@ function enregistrer() {
                     <Label for="dir-ecole-adresse">Adresse</Label>
                     <Input
                         id="dir-ecole-adresse"
+                        placeholder="5 av. Bourguiba"
                         v-model="form.ecole_adresse"
                         required
                     />
@@ -155,6 +169,7 @@ function enregistrer() {
                         <Label for="dir-ecole-ville">Ville</Label>
                         <Input
                             id="dir-ecole-ville"
+                            placeholder="Tunis"
                             v-model="form.ecole_ville"
                             required
                         />
@@ -167,6 +182,7 @@ function enregistrer() {
                         >
                         <Input
                             id="dir-ecole-telephone"
+                            placeholder="+216 71 000 000"
                             v-model="form.ecole_telephone"
                             type="tel"
                             required
@@ -175,7 +191,7 @@ function enregistrer() {
                     </div>
                 </div>
 
-                <DialogFooter class="gap-2">
+                <DialogFooter class="gap-3">
                     <Button
                         type="button"
                         variant="outline"

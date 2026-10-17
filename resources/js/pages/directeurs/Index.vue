@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { Eye, Pencil, Plus, Search, Trash2 } from '@lucide/vue';
 import { watchDebounced } from '@vueuse/core';
 import { computed, ref } from 'vue';
+import BoutonIcone from '@/components/BoutonIcone.vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
 import DirecteurFormDialog from '@/components/directeurs/DirecteurFormDialog.vue';
-import Heading from '@/components/Heading.vue';
+import FiltrePastilles from '@/components/FiltrePastilles.vue';
+import Initiales from '@/components/Initiales.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import PaginationLinks from '@/components/PaginationLinks.vue';
 import StatutBadge from '@/components/StatutBadge.vue';
 import { Button } from '@/components/ui/button';
@@ -13,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { destroy, index, show } from '@/routes/directeurs';
 import type { Directeur, Pagination, User } from '@/types';
 
+// Écran 09 — Directeurs (Admin)
 type Statut = User['statut'];
 
 const props = defineProps<{
@@ -25,29 +29,24 @@ defineOptions({
     layout: { titre: 'Directeurs' },
 });
 
-// --- Onglets par statut ---
-const onglets: { statut: Statut | null; libelle: string }[] = [
-    { statut: null, libelle: 'Tous' },
-    { statut: 'EN_ATTENTE', libelle: 'En attente' },
-    { statut: 'ACTIF', libelle: 'Actifs' },
-    { statut: 'REFUSE', libelle: 'Refusés' },
-    { statut: 'DESACTIVE', libelle: 'Désactivés' },
-];
-
-function compteur(statut: Statut | null): number {
-    if (statut === null) {
-        return Object.values(props.compteurs).reduce(
-            (total, n) => total + (n ?? 0),
-            0,
-        );
-    }
-
-    return props.compteurs[statut] ?? 0;
-}
-
-// --- Recherche et filtre (rechargés automatiquement) ---
+// --- Recherche et filtre par statut (rechargés automatiquement) ---
 const recherche = ref(props.filtres.q);
 const statut = ref<Statut | null>(props.filtres.statut);
+
+const pastilles = computed<{ valeur: Statut | null; libelle: string }[]>(() => {
+    const enAttente = props.compteurs.EN_ATTENTE ?? 0;
+
+    return [
+        { valeur: null, libelle: 'Tous' },
+        {
+            valeur: 'EN_ATTENTE',
+            libelle: enAttente ? `En attente (${enAttente})` : 'En attente',
+        },
+        { valeur: 'ACTIF', libelle: 'Actifs' },
+        { valeur: 'REFUSE', libelle: 'Refusés' },
+        { valeur: 'DESACTIVE', libelle: 'Désactivés' },
+    ];
+});
 
 watchDebounced(
     [recherche, statut],
@@ -64,7 +63,11 @@ watchDebounced(
     { debounce: 300 },
 );
 
-// --- Fenêtre Ajouter / Modifier ---
+function voir(directeur: Directeur) {
+    router.visit(show(directeur.id));
+}
+
+// --- Fenêtre Ajouter / Modifier (F4) ---
 const formulaireOuvert = ref(false);
 const directeurEnCours = ref<Directeur | null>(null);
 
@@ -78,15 +81,10 @@ function modifier(directeur: Directeur) {
     formulaireOuvert.value = true;
 }
 
-// --- Fenêtre Supprimer (désactiver) ---
+// --- Fenêtre Supprimer (F3) ---
 const aSupprimer = ref<Directeur | null>(null);
 const confirmationOuverte = ref(false);
 const suppressionEnCours = ref(false);
-
-const messageSuppression = computed(
-    () =>
-        `Le compte de ${aSupprimer.value?.prenom} ${aSupprimer.value?.nom} sera désactivé : il ne pourra plus se connecter, mais son historique est conservé.`,
-);
 
 function demanderSuppression(directeur: Directeur) {
     aSupprimer.value = directeur;
@@ -112,227 +110,177 @@ function supprimer() {
 <template>
     <Head title="Directeurs" />
 
-    <div class="flex flex-1 flex-col gap-6 p-4">
-        <div
-            class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
-        >
-            <Heading
-                title="Directeurs"
-                description="Les directeurs et leurs écoles"
-            />
-            <Button @click="ajouter">
-                <Plus />
-                Ajouter un directeur
-            </Button>
-        </div>
+    <PageHeader
+        titre="Directeurs"
+        sous-titre="Gérez les comptes des directeurs et validez les inscriptions."
+    >
+        <Button @click="ajouter">
+            <Plus />
+            Ajouter un directeur
+        </Button>
+    </PageHeader>
 
-        <!-- Onglets par statut -->
-        <div class="flex gap-2 overflow-x-auto pb-1">
-            <button
-                v-for="onglet in onglets"
-                :key="onglet.libelle"
-                type="button"
-                class="flex shrink-0 items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors"
-                :class="
-                    statut === onglet.statut
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'hover:bg-muted'
-                "
-                @click="statut = onglet.statut"
-            >
-                {{ onglet.libelle }}
-                <span
-                    class="rounded-full px-1.5 text-xs"
-                    :class="
-                        onglet.statut === 'EN_ATTENTE' &&
-                        compteur(onglet.statut) > 0
-                            ? 'bg-[#FFC94D] text-[#2D2B45]'
-                            : 'bg-black/10 dark:bg-white/15'
-                    "
-                >
-                    {{ compteur(onglet.statut) }}
-                </span>
-            </button>
-        </div>
-
-        <div class="relative">
+    <!-- Recherche + filtres -->
+    <div class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div class="relative lg:w-80">
             <Search
-                class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                class="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-indice"
             />
             <Input
                 v-model="recherche"
-                class="pl-9"
-                placeholder="Rechercher par nom, email ou école…"
+                class="pl-12"
+                placeholder="Rechercher un directeur"
             />
         </div>
+        <FiltrePastilles v-model="statut" :options="pastilles" />
+    </div>
 
-        <p
-            v-if="directeurs.data.length === 0"
-            class="rounded-xl border border-dashed p-8 text-center text-muted-foreground"
-        >
-            Aucun directeur trouvé.
-        </p>
+    <p
+        v-if="directeurs.data.length === 0"
+        class="rounded-xl border border-dashed bg-white p-10 text-center text-muted-foreground"
+    >
+        Aucun directeur trouvé.
+    </p>
 
-        <template v-else>
-            <!-- Ordinateur : tableau -->
-            <div class="hidden overflow-x-auto rounded-xl border md:block">
-                <table class="w-full text-sm">
-                    <thead class="bg-muted/50 text-left text-muted-foreground">
-                        <tr>
-                            <th class="px-4 py-3 font-medium">Directeur</th>
-                            <th class="px-4 py-3 font-medium">École</th>
-                            <th class="px-4 py-3 font-medium">Ville</th>
-                            <th class="px-4 py-3 font-medium">Inscrit le</th>
-                            <th class="px-4 py-3 font-medium">Statut</th>
-                            <th class="px-4 py-3 text-right font-medium">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="directeur in directeurs.data"
-                            :key="directeur.id"
-                            class="border-t"
-                        >
-                            <td class="px-4 py-3">
-                                <p class="font-medium">
+    <template v-else>
+        <!-- Ordinateur : tableau -->
+        <div class="hidden overflow-x-auto rounded-xl border bg-white md:block">
+            <table class="w-full text-sm">
+                <thead class="bg-fond text-left text-muted-foreground">
+                    <tr>
+                        <th class="px-6 py-4 font-medium">Nom</th>
+                        <th class="px-4 py-4 font-medium">École</th>
+                        <th class="px-4 py-4 font-medium">Email</th>
+                        <th class="px-4 py-4 font-medium">Statut</th>
+                        <th class="px-4 py-4 font-medium">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr
+                        v-for="directeur in directeurs.data"
+                        :key="directeur.id"
+                        class="border-t"
+                    >
+                        <td class="px-6 py-3.5">
+                            <div class="flex items-center gap-3">
+                                <Initiales
+                                    :prenom="directeur.prenom"
+                                    :nom="directeur.nom"
+                                />
+                                <span class="text-[15px] font-semibold">
                                     {{ directeur.prenom }} {{ directeur.nom }}
-                                </p>
-                                <p class="text-muted-foreground">
-                                    {{ directeur.email }}
-                                </p>
-                            </td>
-                            <td class="px-4 py-3">
-                                {{ directeur.ecole?.nom ?? '—' }}
-                            </td>
-                            <td class="px-4 py-3">
-                                {{ directeur.ecole?.ville ?? '—' }}
-                            </td>
-                            <td class="px-4 py-3">
-                                {{ directeur.date_creation }}
-                            </td>
-                            <td class="px-4 py-3">
-                                <StatutBadge :statut="directeur.statut" />
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="flex justify-end gap-1">
-                                    <Button
-                                        v-if="directeur.statut === 'EN_ATTENTE'"
-                                        size="sm"
-                                        as-child
+                                </span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3.5">
+                            {{ directeur.ecole?.nom ?? '—' }}
+                        </td>
+                        <td class="px-4 py-3.5">{{ directeur.email }}</td>
+                        <td class="px-4 py-3.5">
+                            <StatutBadge :statut="directeur.statut" />
+                        </td>
+                        <td class="px-4 py-3.5">
+                            <div class="flex gap-2">
+                                <template v-if="directeur.statut === 'ACTIF'">
+                                    <BoutonIcone
+                                        :libelle="`Modifier ${directeur.prenom} ${directeur.nom}`"
+                                        @click="modifier(directeur)"
                                     >
-                                        <Link :href="show(directeur.id)"
-                                            >Examiner</Link
-                                        >
-                                    </Button>
-                                    <Button
-                                        v-else
-                                        variant="ghost"
-                                        size="icon"
-                                        as-child
-                                        :aria-label="`Voir ${directeur.prenom} ${directeur.nom}`"
+                                        <Pencil />
+                                    </BoutonIcone>
+                                    <BoutonIcone
+                                        danger
+                                        :libelle="`Supprimer ${directeur.prenom} ${directeur.nom}`"
+                                        @click="demanderSuppression(directeur)"
                                     >
-                                        <Link :href="show(directeur.id)"
-                                            ><Eye
-                                        /></Link>
-                                    </Button>
-                                    <template
-                                        v-if="directeur.statut === 'ACTIF'"
-                                    >
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            :aria-label="`Modifier ${directeur.prenom} ${directeur.nom}`"
-                                            @click="modifier(directeur)"
-                                        >
-                                            <Pencil />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            class="text-destructive"
-                                            :aria-label="`Supprimer ${directeur.prenom} ${directeur.nom}`"
-                                            @click="
-                                                demanderSuppression(directeur)
-                                            "
-                                        >
-                                            <Trash2 />
-                                        </Button>
-                                    </template>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                                        <Trash2 />
+                                    </BoutonIcone>
+                                </template>
+                                <BoutonIcone
+                                    v-else
+                                    class="text-primary"
+                                    :libelle="`Voir ${directeur.prenom} ${directeur.nom}`"
+                                    @click="voir(directeur)"
+                                >
+                                    <Eye />
+                                </BoutonIcone>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-            <!-- Téléphone : cartes -->
-            <div class="grid gap-3 md:hidden">
-                <div
-                    v-for="directeur in directeurs.data"
-                    :key="directeur.id"
-                    class="rounded-xl border p-4"
-                >
-                    <div class="flex items-start justify-between gap-2">
-                        <div>
-                            <p class="font-semibold">
-                                {{ directeur.prenom }} {{ directeur.nom }}
-                            </p>
-                            <p class="text-sm text-muted-foreground">
-                                {{ directeur.ecole?.nom }} ·
-                                {{ directeur.ecole?.ville }}
-                            </p>
-                        </div>
-                        <StatutBadge :statut="directeur.statut" />
+        <!-- Téléphone : cartes -->
+        <div class="grid gap-3 md:hidden">
+            <div
+                v-for="directeur in directeurs.data"
+                :key="directeur.id"
+                class="rounded-xl border bg-white p-4"
+            >
+                <div class="flex items-center gap-3">
+                    <Initiales
+                        :prenom="directeur.prenom"
+                        :nom="directeur.nom"
+                    />
+                    <div class="min-w-0 flex-1">
+                        <p class="font-semibold">
+                            {{ directeur.prenom }} {{ directeur.nom }}
+                        </p>
+                        <p class="truncate text-sm text-muted-foreground">
+                            {{ directeur.ecole?.nom }}
+                        </p>
                     </div>
-                    <p class="mt-3 text-sm break-all">{{ directeur.email }}</p>
-                    <div class="mt-3 flex gap-2">
+                    <StatutBadge :statut="directeur.statut" />
+                </div>
+                <p class="mt-3 text-sm break-all text-muted-foreground">
+                    {{ directeur.email }}
+                </p>
+                <div class="mt-3 flex gap-2">
+                    <template v-if="directeur.statut === 'ACTIF'">
                         <Button
-                            :variant="
-                                directeur.statut === 'EN_ATTENTE'
-                                    ? 'default'
-                                    : 'outline'
-                            "
+                            variant="outline"
                             size="sm"
                             class="flex-1"
-                            as-child
+                            @click="modifier(directeur)"
                         >
-                            <Link :href="show(directeur.id)">
-                                {{
-                                    directeur.statut === 'EN_ATTENTE'
-                                        ? 'Examiner'
-                                        : 'Voir'
-                                }}
-                            </Link>
+                            <Pencil />
+                            Modifier
                         </Button>
-                        <template v-if="directeur.statut === 'ACTIF'">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                class="flex-1"
-                                @click="modifier(directeur)"
-                            >
-                                <Pencil />
-                                Modifier
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                class="flex-1 text-destructive"
-                                @click="demanderSuppression(directeur)"
-                            >
-                                <Trash2 />
-                                Supprimer
-                            </Button>
-                        </template>
-                    </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            class="flex-1 text-erreur"
+                            @click="demanderSuppression(directeur)"
+                        >
+                            <Trash2 />
+                            Supprimer
+                        </Button>
+                    </template>
+                    <Button
+                        v-else
+                        :variant="
+                            directeur.statut === 'EN_ATTENTE'
+                                ? 'default'
+                                : 'outline'
+                        "
+                        size="sm"
+                        class="flex-1"
+                        @click="voir(directeur)"
+                    >
+                        <Eye />
+                        {{
+                            directeur.statut === 'EN_ATTENTE'
+                                ? "Examiner l'inscription"
+                                : 'Voir'
+                        }}
+                    </Button>
                 </div>
             </div>
+        </div>
 
-            <PaginationLinks :pagination="directeurs" />
-        </template>
-    </div>
+        <PaginationLinks class="mt-6" :pagination="directeurs" />
+    </template>
 
     <DirecteurFormDialog
         v-model:open="formulaireOuvert"
@@ -341,8 +289,8 @@ function supprimer() {
 
     <ConfirmationDialog
         v-model:open="confirmationOuverte"
-        titre="Supprimer ce directeur ?"
-        :message="messageSuppression"
+        titre="Supprimer ce compte ?"
+        :message="`Le compte de ${aSupprimer?.prenom} ${aSupprimer?.nom} sera désactivé : la personne ne pourra plus se connecter, mais son historique est conservé.`"
         libelle-confirmer="Supprimer"
         :en-cours="suppressionEnCours"
         @confirmer="supprimer"

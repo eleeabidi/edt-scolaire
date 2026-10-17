@@ -29,11 +29,13 @@ class EnseignantController extends Controller
         $user = $request->user();
         $recherche = $request->string('q')->trim()->value();
         $ecoleId = $user->isAdmin() ? $request->integer('ecole') ?: null : null;
+        $statut = StatutCompte::tryFrom($request->string('statut')->value());
 
         $enseignants = User::query()
             ->where('role', Role::Enseignant)
             ->when($user->isDirecteur(), fn (Builder $q) => $q->where('ecole_id', $user->ecole_id))
             ->when($ecoleId, fn (Builder $q) => $q->where('ecole_id', $ecoleId))
+            ->when($statut, fn (Builder $q) => $q->where('statut', $statut))
             ->when($recherche, fn (Builder $q) => $q->where(fn (Builder $q) => $q
                 ->where('nom', 'like', "%{$recherche}%")
                 ->orWhere('prenom', 'like', "%{$recherche}%")
@@ -58,7 +60,8 @@ class EnseignantController extends Controller
 
         return Inertia::render('enseignants/Index', [
             'enseignants' => $enseignants,
-            'filtres' => ['q' => $recherche, 'ecole' => $ecoleId],
+            'filtres' => ['q' => $recherche, 'ecole' => $ecoleId, 'statut' => $statut?->value],
+            'ecoleNom' => $user->ecole?->nom,
             'ecoles' => $user->isAdmin() ? Ecole::orderBy('nom')->get(['id', 'nom']) : [],
             'estAdmin' => $user->isAdmin(),
         ]);

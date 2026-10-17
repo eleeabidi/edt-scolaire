@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Trash2 } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -10,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 
-// Fenêtre « Êtes-vous sûr ? » réutilisable
+// Fenêtre F3 « Supprimer ce compte ? » (réutilisable)
 withDefaults(
     defineProps<{
         titre: string;
@@ -29,15 +30,22 @@ const emit = defineEmits<{ confirmer: [] }>();
 <template>
     <Dialog v-model:open="ouvert">
         <DialogContent>
+            <div
+                class="flex size-14 items-center justify-center rounded-2xl bg-erreur/15 text-erreur"
+            >
+                <Trash2 class="size-5" />
+            </div>
             <DialogHeader>
                 <DialogTitle>{{ titre }}</DialogTitle>
-                <DialogDescription>{{ message }}</DialogDescription>
+                <DialogDescription class="leading-relaxed">
+                    {{ message }}
+                </DialogDescription>
             </DialogHeader>
 
-            <DialogFooter class="gap-2">
-                <Button variant="outline" @click="ouvert = false"
-                    >Annuler</Button
-                >
+            <DialogFooter class="gap-3">
+                <Button variant="outline" @click="ouvert = false">
+                    Annuler
+                </Button>
                 <Button
                     variant="destructive"
                     :disabled="enCours"

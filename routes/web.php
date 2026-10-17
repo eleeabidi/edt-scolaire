@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Role;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirecteurController;
 use App\Http\Controllers\EnseignantController;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ Route::get('/', function (Request $request) {
 })->name('home');
 
 Route::middleware(['auth'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')
+    Route::get('dashboard', DashboardController::class)
         ->middleware('role:admin')
         ->name('dashboard');
 
