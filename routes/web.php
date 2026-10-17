@@ -14,7 +14,7 @@ Route::get('/', function (Request $request) {
     };
 })->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')
         ->middleware('role:admin')
         ->name('dashboard');
