@@ -73,7 +73,7 @@ return [
     |
     */
 
-    'home' => '/dashboard',
+    'home' => '/', // la route « home » redirige selon le rôle
 
     /*
     |--------------------------------------------------------------------------
