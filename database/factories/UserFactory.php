@@ -72,6 +72,7 @@ class UserFactory extends Factory
             'role' => Role::Enseignant,
             'ecole_id' => $ecole->id ?? Ecole::factory(),
             'specialite' => fake()->randomElement(['Mathématiques', 'Français', 'Arabe', 'Anglais', 'Sciences', 'Histoire-Géographie', 'Éducation physique']),
+            'volume_horaire_max' => fake()->randomElement([18, 20, 22, 24]),
         ]);
     }
 
