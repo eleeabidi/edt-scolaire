@@ -41,7 +41,6 @@ class DatabaseSeeder extends Seeder
             'prenom' => 'Amira',
             'email' => 'enseignant@edt-scolaire.test',
             'specialite' => 'Mathématiques',
-            'volume_horaire_max' => 20,
         ]);
 
         User::factory(5)->enseignant($ecole)->create();

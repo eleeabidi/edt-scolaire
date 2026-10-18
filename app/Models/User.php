@@ -28,13 +28,12 @@ use Illuminate\Support\Carbon;
  * @property StatutCompte $statut
  * @property int|null $ecole_id
  * @property string|null $specialite
- * @property int|null $volume_horaire_max
  * @property string|null $motif_refus
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['nom', 'prenom', 'email', 'password', 'telephone', 'role', 'statut', 'ecole_id', 'specialite', 'volume_horaire_max', 'motif_refus'])]
+#[Fillable(['nom', 'prenom', 'email', 'password', 'telephone', 'role', 'statut', 'ecole_id', 'specialite', 'motif_refus'])]
 #[Hidden(['password', 'remember_token'])]
 #[Appends(['name'])]
 class User extends Authenticatable
@@ -54,7 +53,6 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => Role::class,
             'statut' => StatutCompte::class,
-            'volume_horaire_max' => 'integer',
         ];
     }
 
