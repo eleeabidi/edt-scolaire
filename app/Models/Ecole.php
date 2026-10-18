@@ -45,4 +45,38 @@ class Ecole extends Model
     {
         return $this->hasMany(User::class)->where('role', Role::Enseignant);
     }
+
+    /**
+     * @return HasMany<Classe, $this>
+     */
+    public function classes(): HasMany
+    {
+        return $this->hasMany(Classe::class);
+    }
+
+    /**
+     * @return HasMany<Matiere, $this>
+     */
+    public function matieres(): HasMany
+    {
+        return $this->hasMany(Matiere::class);
+    }
+
+    /**
+     * @return HasMany<Salle, $this>
+     */
+    public function salles(): HasMany
+    {
+        return $this->hasMany(Salle::class);
+    }
+
+    /**
+     * Les créneaux horaires de l'école.
+     *
+     * @return HasMany<Horaire, $this>
+     */
+    public function horaires(): HasMany
+    {
+        return $this->hasMany(Horaire::class);
+    }
 }
