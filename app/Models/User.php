@@ -11,8 +11,6 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -78,27 +76,6 @@ class User extends Authenticatable
     public function ecole(): BelongsTo
     {
         return $this->belongsTo(Ecole::class);
-    }
-
-    /**
-     * Les matières qu'un enseignant peut enseigner.
-     *
-     * @return BelongsToMany<Matiere, $this>
-     */
-    public function matieres(): BelongsToMany
-    {
-        return $this->belongsToMany(Matiere::class, 'enseignant_matiere', 'enseignant_id', 'matiere_id')
-            ->withTimestamps();
-    }
-
-    /**
-     * Les plages de disponibilité d'un enseignant.
-     *
-     * @return HasMany<Disponibilite, $this>
-     */
-    public function disponibilites(): HasMany
-    {
-        return $this->hasMany(Disponibilite::class, 'enseignant_id');
     }
 
     public function isAdmin(): bool
