@@ -3,6 +3,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { Pencil, Plus, Search, Trash2 } from '@lucide/vue';
 import { watchDebounced } from '@vueuse/core';
 import { computed, ref } from 'vue';
+import BanniereEchecEnvoi from '@/components/BanniereEchecEnvoi.vue';
 import BoutonIcone from '@/components/BoutonIcone.vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
 import EnseignantFormDialog from '@/components/enseignants/EnseignantFormDialog.vue';
@@ -13,7 +14,7 @@ import PaginationLinks from '@/components/PaginationLinks.vue';
 import StatutBadge from '@/components/StatutBadge.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { destroy, index } from '@/routes/enseignants';
+import { destroy, identifiants, index } from '@/routes/enseignants';
 import type { EcoleOption, Enseignant, Pagination } from '@/types';
 
 // Écran 08 — Enseignants (Admin et Directeur)
@@ -36,6 +37,14 @@ const sousTitre = computed(() => {
 
     return props.ecoleNom ? `${props.ecoleNom} · ${total}` : total;
 });
+
+// Une recherche ou un filtre est-il appliqué ? (pour choisir le message « liste vide »)
+const filtreApplique = computed(
+    () =>
+        Boolean(props.filtres.q) ||
+        props.filtres.ecole !== null ||
+        props.filtres.statut !== null,
+);
 
 // --- Recherche et filtres (rechargés automatiquement) ---
 const recherche = ref(props.filtres.q);
@@ -114,6 +123,8 @@ function supprimer() {
         </Button>
     </PageHeader>
 
+    <BanniereEchecEnvoi :url-renvoi="(id) => identifiants.url(id)" />
+
     <!-- Recherche + filtres -->
     <div class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center">
         <div class="relative lg:w-90">
@@ -140,12 +151,25 @@ function supprimer() {
         </select>
     </div>
 
+    <!-- 3a : la recherche ne donne aucun résultat -->
     <p
-        v-if="enseignants.data.length === 0"
+        v-if="enseignants.data.length === 0 && filtreApplique"
         class="rounded-xl border border-dashed bg-white p-10 text-center text-muted-foreground"
     >
-        Aucun enseignant trouvé.
+        Aucun enseignant ne correspond à votre recherche.
     </p>
+
+    <!-- 2a : aucun enseignant n'est enregistré → proposer d'en ajouter un -->
+    <div
+        v-else-if="enseignants.data.length === 0"
+        class="flex flex-col items-center gap-4 rounded-xl border border-dashed bg-white p-10 text-center"
+    >
+        <p class="font-semibold">Aucun enseignant</p>
+        <Button @click="ajouter">
+            <Plus />
+            Ajouter un enseignant
+        </Button>
+    </div>
 
     <template v-else>
         <!-- Ordinateur : tableau -->

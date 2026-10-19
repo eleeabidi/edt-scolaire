@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\EnvoieIdentifiants;
 use App\Enums\Role;
 use App\Enums\StatutCompte;
 use App\Http\Requests\DirecteurRequest;
 use App\Models\Ecole;
 use App\Models\User;
-use App\Notifications\CompteCreeNotification;
 use App\Notifications\InscriptionRefuseeNotification;
 use App\Notifications\InscriptionValideeNotification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 /**
  * Gérer les directeurs (Admin uniquement) : ajouter, modifier, supprimer,
@@ -24,6 +25,8 @@ use Inertia\Response;
  */
 class DirecteurController extends Controller
 {
+    use EnvoieIdentifiants;
+
     /**
      * Liste des directeurs, avec filtre par statut et recherche.
      */
@@ -78,7 +81,7 @@ class DirecteurController extends Controller
      */
     public function store(DirecteurRequest $request): RedirectResponse
     {
-        $motDePasse = Str::password(10, symbols: false);
+        $motDePasse = $this->genererMotDePasseTemporaire();
 
         $directeur = DB::transaction(function () use ($request, $motDePasse) {
             $ecole = Ecole::create($request->ecole());
@@ -92,11 +95,22 @@ class DirecteurController extends Controller
             ]);
         });
 
-        $directeur->notify(new CompteCreeNotification($motDePasse));
+        return $this->reponseApresCreation(
+            $directeur,
+            $this->envoyerIdentifiants($directeur, $motDePasse),
+            'Le directeur a été ajouté. Son mot de passe temporaire lui a été envoyé par email.',
+        );
+    }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Le directeur a été ajouté. Son mot de passe temporaire lui a été envoyé par email.']);
+    /**
+     * Renvoie l'email avec un nouveau mot de passe temporaire (si le premier envoi a échoué).
+     */
+    public function renvoyerIdentifiants(User $directeur): RedirectResponse
+    {
+        $this->verifierDirecteur($directeur);
+        abort_unless($directeur->isActif(), 409, "Ce compte n'est pas actif.");
 
-        return back();
+        return $this->renvoyer($directeur);
     }
 
     /**
@@ -138,7 +152,7 @@ class DirecteurController extends Controller
         $this->verifierInscriptionEnAttente($directeur);
 
         $directeur->update(['statut' => StatutCompte::Actif, 'motif_refus' => null]);
-        $directeur->notify(new InscriptionValideeNotification);
+        $this->prevenir($directeur, new InscriptionValideeNotification);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => "L'inscription a été validée. Le directeur a été prévenu par email."]);
 
@@ -157,7 +171,7 @@ class DirecteurController extends Controller
         ])['motif'] ?? null;
 
         $directeur->update(['statut' => StatutCompte::Refuse, 'motif_refus' => $motif]);
-        $directeur->notify(new InscriptionRefuseeNotification($motif));
+        $this->prevenir($directeur, new InscriptionRefuseeNotification($motif));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => "L'inscription a été refusée. Le directeur a été prévenu par email."]);
 
@@ -183,6 +197,19 @@ class DirecteurController extends Controller
             'date_creation_longue' => $directeur->created_at?->translatedFormat('j F Y à H:i'),
             'ecole' => $directeur->ecole?->only(['nom', 'adresse', 'ville', 'telephone']),
         ];
+    }
+
+    /**
+     * Envoie un email au directeur sans bloquer l'action si l'envoi échoue.
+     */
+    private function prevenir(User $directeur, Notification $notification): void
+    {
+        try {
+            $directeur->notify($notification);
+        } catch (Throwable $e) {
+            report($e);
+            Inertia::flash('toast', ['type' => 'warning', 'message' => "L'action a été enregistrée, mais l'email n'a pas pu être envoyé au directeur."]);
+        }
     }
 
     private function verifierDirecteur(User $directeur): void

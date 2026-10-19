@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
+use RuntimeException;
 use Tests\TestCase;
 
 class EnseignantTest extends TestCase
@@ -216,5 +217,47 @@ class EnseignantTest extends TestCase
 
         // Le compte existe toujours, mais il est désactivé
         $this->assertSame(StatutCompte::Desactive, $enseignant->refresh()->statut);
+    }
+
+    public function test_if_the_email_fails_the_account_is_created_and_the_failure_is_reported()
+    {
+        // Ajouter un enseignant 6a
+        Notification::shouldReceive('send')->andThrow(new RuntimeException('Serveur email injoignable'));
+        $directeur = User::factory()->directeur()->create();
+
+        $this->actingAs($directeur)
+            ->post(route('enseignants.store'), $this->donnees())
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('echecEnvoi');
+
+        $enseignant = User::where('email', 'leila@example.com')->first();
+        $this->assertNotNull($enseignant);
+        $this->assertSame($enseignant->id, session('echecEnvoi')['id']);
+    }
+
+    public function test_the_email_can_be_sent_again_with_a_new_temporary_password()
+    {
+        Notification::fake();
+        $directeur = User::factory()->directeur()->create();
+        $enseignant = User::factory()->enseignant($directeur->ecole)->create();
+        $ancienMotDePasse = $enseignant->password;
+
+        $this->actingAs($directeur)
+            ->post(route('enseignants.identifiants', $enseignant))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNotSame($ancienMotDePasse, $enseignant->refresh()->password);
+        Notification::assertSentTo($enseignant, function (CompteCreeNotification $notification) use ($enseignant) {
+            return Hash::check($notification->motDePasseTemporaire, $enseignant->password);
+        });
+    }
+
+    public function test_a_directeur_cannot_resend_the_email_of_another_school()
+    {
+        $directeur = User::factory()->directeur()->create();
+
+        $this->actingAs($directeur)
+            ->post(route('enseignants.identifiants', User::factory()->enseignant()->create()))
+            ->assertForbidden();
     }
 }

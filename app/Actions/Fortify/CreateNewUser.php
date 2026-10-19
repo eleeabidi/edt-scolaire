@@ -2,15 +2,18 @@
 
 namespace App\Actions\Fortify;
 
+use App\Concerns\EcoleValidationRules;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Enums\Role;
 use App\Enums\StatutCompte;
 use App\Models\Ecole;
 use App\Models\User;
+use App\Notifications\InscriptionRecueNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
+use Throwable;
 
 /**
  * Inscription d'un directeur : création de son école et de son compte
@@ -18,7 +21,7 @@ use Laravel\Fortify\Contracts\CreatesNewUsers;
  */
 class CreateNewUser implements CreatesNewUsers
 {
-    use PasswordValidationRules, ProfileValidationRules;
+    use EcoleValidationRules, PasswordValidationRules, ProfileValidationRules;
 
     /**
      * Validate and create a newly registered user.
@@ -31,15 +34,12 @@ class CreateNewUser implements CreatesNewUsers
             // Étape 1 : le directeur
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
-            // Étape 2 : l'école
-            'ecole_nom' => ['required', 'string', 'max:255'],
-            'ecole_adresse' => ['required', 'string', 'max:255'],
-            'ecole_ville' => ['required', 'string', 'max:255'],
-            'ecole_telephone' => ['required', 'string', 'max:20'],
+            // Étape 2 : l'école (refusée si une école du même nom existe dans la même ville)
+            ...$this->ecoleRules($input['ecole_ville'] ?? null),
         ])->validate();
 
         // Les deux enregistrements sont créés ensemble, ou pas du tout
-        return DB::transaction(function () use ($input) {
+        $directeur = DB::transaction(function () use ($input) {
             $ecole = Ecole::create([
                 'nom' => $input['ecole_nom'],
                 'adresse' => $input['ecole_adresse'],
@@ -58,5 +58,14 @@ class CreateNewUser implements CreatesNewUsers
                 'ecole_id' => $ecole->id,
             ]);
         });
+
+        // Étape 7 : email de confirmation (une panne d'email ne bloque pas l'inscription)
+        try {
+            $directeur->notify(new InscriptionRecueNotification);
+        } catch (Throwable $e) {
+            report($e);
+        }
+
+        return $directeur;
     }
 }

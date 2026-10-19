@@ -3,6 +3,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { Eye, Pencil, Plus, Search, Trash2 } from '@lucide/vue';
 import { watchDebounced } from '@vueuse/core';
 import { computed, ref } from 'vue';
+import BanniereEchecEnvoi from '@/components/BanniereEchecEnvoi.vue';
 import BoutonIcone from '@/components/BoutonIcone.vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
 import DirecteurFormDialog from '@/components/directeurs/DirecteurFormDialog.vue';
@@ -13,7 +14,7 @@ import PaginationLinks from '@/components/PaginationLinks.vue';
 import StatutBadge from '@/components/StatutBadge.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { destroy, index, show } from '@/routes/directeurs';
+import { destroy, identifiants, index, show } from '@/routes/directeurs';
 import type { Directeur, Pagination, User } from '@/types';
 
 // Écran 09 — Directeurs (Admin)
@@ -120,6 +121,8 @@ function supprimer() {
         </Button>
     </PageHeader>
 
+    <BanniereEchecEnvoi :url-renvoi="(id) => identifiants.url(id)" />
+
     <!-- Recherche + filtres -->
     <div class="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center">
         <div class="relative lg:w-80">
@@ -135,12 +138,39 @@ function supprimer() {
         <FiltrePastilles v-model="statut" :options="pastilles" />
     </div>
 
+    <!-- Valider une inscription 2a : aucune inscription en attente -->
     <p
-        v-if="directeurs.data.length === 0"
+        v-if="
+            directeurs.data.length === 0 &&
+            filtres.statut === 'EN_ATTENTE' &&
+            !filtres.q
+        "
         class="rounded-xl border border-dashed bg-white p-10 text-center text-muted-foreground"
     >
-        Aucun directeur trouvé.
+        Aucune inscription en attente.
     </p>
+
+    <!-- 3a : la recherche ne donne aucun résultat -->
+    <p
+        v-else-if="
+            directeurs.data.length === 0 && (filtres.q || filtres.statut)
+        "
+        class="rounded-xl border border-dashed bg-white p-10 text-center text-muted-foreground"
+    >
+        Aucun directeur ne correspond à votre recherche.
+    </p>
+
+    <!-- 2a : aucun directeur n'est enregistré → proposer d'en ajouter un -->
+    <div
+        v-else-if="directeurs.data.length === 0"
+        class="flex flex-col items-center gap-4 rounded-xl border border-dashed bg-white p-10 text-center"
+    >
+        <p class="font-semibold">Aucun directeur</p>
+        <Button @click="ajouter">
+            <Plus />
+            Ajouter un directeur
+        </Button>
+    </div>
 
     <template v-else>
         <!-- Ordinateur : tableau -->
@@ -290,7 +320,7 @@ function supprimer() {
     <ConfirmationDialog
         v-model:open="confirmationOuverte"
         titre="Supprimer ce compte ?"
-        :message="`Le compte de ${aSupprimer?.prenom} ${aSupprimer?.nom} sera désactivé : la personne ne pourra plus se connecter, mais son historique est conservé.`"
+        :message="`Le compte de ${aSupprimer?.prenom} ${aSupprimer?.nom} sera désactivé : il ne pourra plus se connecter. Son école et ses enseignants restent enregistrés.`"
         libelle-confirmer="Supprimer"
         :en-cours="suppressionEnCours"
         @confirmer="supprimer"

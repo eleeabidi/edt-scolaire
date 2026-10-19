@@ -49,6 +49,9 @@ return [
         'email' => [
             'unique' => 'Cette adresse email est déjà utilisée.',
         ],
+        'ecole_nom' => [
+            'unique' => 'Une école du même nom existe déjà dans cette ville.',
+        ],
     ],
 
     // Noms des champs affichés dans les messages

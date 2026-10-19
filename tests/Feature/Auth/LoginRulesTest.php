@@ -11,18 +11,40 @@ class LoginRulesTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_only_active_accounts_can_login()
+    public function test_a_pending_account_is_told_that_the_registration_is_not_validated_yet()
     {
-        foreach ([StatutCompte::EnAttente, StatutCompte::Refuse, StatutCompte::Desactive] as $statut) {
+        // S'authentifier 4b
+        $user = User::factory()->directeur()->statut(StatutCompte::EnAttente)->create();
+
+        $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password1'])
+            ->assertSessionHasErrors(['email' => "Votre inscription n'est pas encore validée par l'administrateur."]);
+
+        $this->assertGuest();
+    }
+
+    public function test_a_refused_or_deactivated_account_is_told_to_contact_the_admin()
+    {
+        // S'authentifier 4c
+        foreach ([StatutCompte::Refuse, StatutCompte::Desactive] as $statut) {
             $user = User::factory()->directeur()->statut($statut)->create();
 
-            $this->post(route('login.store'), [
-                'email' => $user->email,
-                'password' => 'password1',
-            ])->assertSessionHasErrors(['email' => 'Email ou mot de passe incorrect.']);
+            $this->post(route('login.store'), ['email' => $user->email, 'password' => 'password1'])
+                ->assertSessionHasErrors(['email' => "Votre compte n'est pas accessible. Veuillez contacter l'administrateur."]);
 
             $this->assertGuest();
         }
+    }
+
+    public function test_the_status_is_only_revealed_with_the_right_password()
+    {
+        // 4a : sans le bon mot de passe, toujours le message générique
+        $user = User::factory()->directeur()->statut(StatutCompte::EnAttente)->create();
+
+        $this->post(route('login.store'), ['email' => $user->email, 'password' => 'mauvais123'])
+            ->assertSessionHasErrors(['email' => 'Email ou mot de passe incorrect.']);
+
+        $this->post(route('login.store'), ['email' => 'inconnu@example.com', 'password' => 'password1'])
+            ->assertSessionHasErrors(['email' => 'Email ou mot de passe incorrect.']);
     }
 
     public function test_wrong_password_shows_the_generic_message()

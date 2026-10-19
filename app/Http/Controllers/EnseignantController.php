@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\EnvoieIdentifiants;
 use App\Enums\Role;
 use App\Enums\StatutCompte;
 use App\Http\Requests\EnseignantRequest;
 use App\Models\Ecole;
 use App\Models\User;
-use App\Notifications\CompteCreeNotification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,6 +20,8 @@ use Inertia\Response;
  */
 class EnseignantController extends Controller
 {
+    use EnvoieIdentifiants;
+
     /**
      * Liste des enseignants, avec recherche (et filtre par école pour l'Admin).
      */
@@ -71,7 +72,7 @@ class EnseignantController extends Controller
     public function store(EnseignantRequest $request): RedirectResponse
     {
         $user = $request->user();
-        $motDePasse = Str::password(10, symbols: false);
+        $motDePasse = $this->genererMotDePasseTemporaire();
 
         $enseignant = User::create([
             ...$request->validated(),
@@ -81,11 +82,22 @@ class EnseignantController extends Controller
             'password' => $motDePasse,
         ]);
 
-        $enseignant->notify(new CompteCreeNotification($motDePasse));
+        return $this->reponseApresCreation(
+            $enseignant,
+            $this->envoyerIdentifiants($enseignant, $motDePasse),
+            "L'enseignant a été ajouté. Son mot de passe temporaire lui a été envoyé par email.",
+        );
+    }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => "L'enseignant a été ajouté. Son mot de passe temporaire lui a été envoyé par email."]);
+    /**
+     * Ajouter un enseignant 6a : renvoie l'email avec un nouveau mot de passe temporaire.
+     */
+    public function renvoyerIdentifiants(Request $request, User $enseignant): RedirectResponse
+    {
+        $this->autoriser($request, $enseignant);
+        abort_unless($enseignant->isActif(), 409, 'Ce compte est désactivé.');
 
-        return back();
+        return $this->renvoyer($enseignant);
     }
 
     /**

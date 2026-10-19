@@ -4,8 +4,11 @@ namespace Tests\Feature\Auth;
 
 use App\Enums\Role;
 use App\Enums\StatutCompte;
+use App\Models\Ecole;
 use App\Models\User;
+use App\Notifications\InscriptionRecueNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
@@ -64,6 +67,38 @@ class RegistrationTest extends TestCase
         $this->assertSame(StatutCompte::EnAttente, $user->statut);
         $this->assertSame('École Ibn Khaldoun', $user->ecole->nom);
         $this->assertSame('Tunis', $user->ecole->ville);
+    }
+
+    public function test_a_confirmation_email_is_sent_after_registration()
+    {
+        // S'inscrire, étape 7
+        Notification::fake();
+
+        $this->post(route('register.store'), $this->donneesInscription());
+
+        Notification::assertSentTo(
+            User::where('email', 'karim@example.com')->first(),
+            InscriptionRecueNotification::class,
+        );
+    }
+
+    public function test_a_school_with_the_same_name_in_the_same_city_is_refused()
+    {
+        // S'inscrire 5d
+        Ecole::factory()->create(['nom' => 'École Ibn Khaldoun', 'ville' => 'Tunis']);
+
+        $this->post(route('register.store'), $this->donneesInscription())
+            ->assertSessionHasErrors(['ecole_nom' => 'Une école du même nom existe déjà dans cette ville.']);
+
+        $this->assertDatabaseMissing('users', ['email' => 'karim@example.com']);
+    }
+
+    public function test_the_same_school_name_is_allowed_in_another_city()
+    {
+        Ecole::factory()->create(['nom' => 'École Ibn Khaldoun', 'ville' => 'Sfax']);
+
+        $this->post(route('register.store'), $this->donneesInscription())
+            ->assertSessionHasNoErrors();
     }
 
     public function test_a_pending_directeur_cannot_login()

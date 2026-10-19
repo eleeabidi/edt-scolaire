@@ -23,7 +23,7 @@ class EnsureUserIsActive
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->withErrors(['email' => __('auth.failed')]);
+            return redirect()->route('login')->withErrors(['email' => __('auth.inaccessible')]);
         }
 
         return $next($request);

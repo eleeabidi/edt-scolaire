@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Concerns\EcoleValidationRules;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -12,6 +13,8 @@ use Illuminate\Validation\Rule;
  */
 class DirecteurRequest extends FormRequest
 {
+    use EcoleValidationRules;
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -25,10 +28,8 @@ class DirecteurRequest extends FormRequest
             'prenom' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique(User::class)->ignore($directeur?->id)],
             'telephone' => ['nullable', 'string', 'max:20'],
-            'ecole_nom' => ['required', 'string', 'max:255'],
-            'ecole_adresse' => ['required', 'string', 'max:255'],
-            'ecole_ville' => ['required', 'string', 'max:255'],
-            'ecole_telephone' => ['required', 'string', 'max:20'],
+            // Ajouter un directeur 4c : pas deux écoles du même nom dans la même ville
+            ...$this->ecoleRules($this->input('ecole_ville'), $directeur?->ecole_id),
         ];
     }
 

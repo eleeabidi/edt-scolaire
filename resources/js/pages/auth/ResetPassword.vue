@@ -3,10 +3,11 @@ import { Form, Head } from '@inertiajs/vue3';
 import { Lock } from '@lucide/vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
+import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { update } from '@/routes/password';
+import { request, update } from '@/routes/password';
 
 // Écran 03 — Nouveau mot de passe
 defineOptions({
@@ -45,8 +46,16 @@ defineProps<{
         v-slot="{ errors, processing }"
         class="mt-8 grid gap-5"
     >
-        <!-- Ex. : lien expiré (plus de 30 minutes) -->
-        <InputError :message="errors.email" />
+        <!-- 5a : lien expiré (plus de 30 minutes) ou déjà utilisé → nouvelle demande -->
+        <div
+            v-if="errors.email"
+            class="rounded-xl bg-erreur/10 px-4 py-3 text-sm"
+        >
+            <InputError :message="errors.email" />
+            <TextLink :href="request()" class="mt-1 inline-block">
+                Faire une nouvelle demande
+            </TextLink>
+        </div>
 
         <div class="grid gap-2">
             <Label for="password">Nouveau mot de passe</Label>

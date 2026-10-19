@@ -103,7 +103,7 @@ const cartes = computed(() => [
             v-if="inscriptions.length === 0"
             class="mt-6 rounded-xl bg-fond p-6 text-center text-muted-foreground"
         >
-            Aucune inscription à traiter. 🎉
+            Aucune inscription en attente.
         </p>
 
         <ul v-else class="mt-4 divide-y divide-bordure">

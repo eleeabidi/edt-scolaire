@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\Role;
 use App\Enums\StatutCompte;
 use Database\Factories\UserFactory;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Attributes\Appends;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -88,6 +89,19 @@ class User extends Authenticatable
     public function isEnseignant(): bool
     {
         return $this->role === Role::Enseignant;
+    }
+
+    /**
+     * Réinitialiser le mot de passe — précondition « compte actif » : un compte en attente,
+     * refusé ou désactivé ne reçoit pas le lien (le message affiché reste le même).
+     *
+     * @param  string  $token
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        if ($this->isActif()) {
+            $this->notify(new ResetPassword($token));
+        }
     }
 
     public function isActif(): bool

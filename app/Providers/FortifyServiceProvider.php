@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Enums\StatutCompte;
+use App\Http\Responses\FailedPasswordResetLinkRequestResponse;
 use App\Http\Responses\RegisterResponse;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -13,7 +15,9 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse as FailedPasswordResetLinkRequestResponseContract;
 use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
@@ -26,6 +30,7 @@ class FortifyServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(RegisterResponseContract::class, RegisterResponse::class);
+        $this->app->bind(FailedPasswordResetLinkRequestResponseContract::class, FailedPasswordResetLinkRequestResponse::class);
     }
 
     /**
@@ -46,16 +51,26 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
 
-        // Seul un compte ACTIF peut se connecter. Dans tous les autres cas,
-        // Fortify affiche le message générique « Email ou mot de passe incorrect ».
+        // S'authentifier : seul un compte ACTIF peut se connecter.
+        // - 4a : email ou mot de passe faux → message générique (renvoi de null)
+        // - 4b / 4c : mot de passe correct mais compte non actif → message selon le statut
+        //   (affiché seulement avec le bon mot de passe, pour ne pas révéler quels comptes existent)
         Fortify::authenticateUsing(function (Request $request) {
             $user = User::where('email', $request->input('email'))->first();
 
-            if ($user && $user->isActif() && Hash::check($request->input('password'), $user->password)) {
-                return $user;
+            if (! $user || ! Hash::check($request->input('password'), $user->password)) {
+                return null;
             }
 
-            return null;
+            if (! $user->isActif()) {
+                throw ValidationException::withMessages([
+                    Fortify::username() => $user->statut === StatutCompte::EnAttente
+                        ? __('auth.en_attente')
+                        : __('auth.inaccessible'),
+                ]);
+            }
+
+            return $user;
         });
     }
 

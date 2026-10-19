@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\StatutCompte;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -36,6 +37,31 @@ class PasswordResetTest extends TestCase
         $this->post(route('password.email'), ['email' => $user->email]);
 
         Notification::assertSentTo($user, ResetPassword::class);
+    }
+
+    public function test_an_unknown_email_gets_the_same_confirmation_and_nothing_is_sent()
+    {
+        // Réinitialiser 4a : on ne révèle pas quels comptes existent
+        Notification::fake();
+
+        $this->post(route('password.email'), ['email' => 'inconnu@example.com'])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', 'Si un compte existe avec cette adresse, un lien de réinitialisation vient de vous être envoyé.');
+
+        Notification::assertNothingSent();
+    }
+
+    public function test_an_account_that_is_not_active_does_not_receive_the_link()
+    {
+        // Précondition : l'utilisateur possède un compte actif
+        Notification::fake();
+        $user = User::factory()->directeur()->statut(StatutCompte::EnAttente)->create();
+
+        $this->post(route('password.email'), ['email' => $user->email])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status');
+
+        Notification::assertNotSentTo($user, ResetPassword::class);
     }
 
     public function test_reset_password_screen_can_be_rendered()

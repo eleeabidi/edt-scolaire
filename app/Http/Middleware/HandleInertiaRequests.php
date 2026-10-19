@@ -44,6 +44,8 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // Ajouter un enseignant 6a : compte créé mais email non envoyé → proposer de le renvoyer
+            'echecEnvoi' => fn () => $request->session()->get('echecEnvoi'),
             // Nombre d'inscriptions de directeurs à traiter (affiché dans le menu de l'Admin)
             'inscriptionsEnAttente' => fn () => $request->user()?->isAdmin()
                 ? User::where('role', Role::Directeur)->where('statut', StatutCompte::EnAttente)->count()

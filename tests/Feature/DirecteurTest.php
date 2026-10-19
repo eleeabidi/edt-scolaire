@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\Role;
 use App\Enums\StatutCompte;
+use App\Models\Ecole;
 use App\Models\User;
 use App\Notifications\CompteCreeNotification;
 use App\Notifications\InscriptionRefuseeNotification;
@@ -11,6 +12,7 @@ use App\Notifications\InscriptionValideeNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
+use RuntimeException;
 use Tests\TestCase;
 
 class DirecteurTest extends TestCase
@@ -221,5 +223,52 @@ class DirecteurTest extends TestCase
         $this->actingAs($this->admin)->post(route('directeurs.refuser', $directeur))->assertStatus(409);
 
         $this->assertSame(StatutCompte::Actif, $directeur->refresh()->statut);
+    }
+
+    public function test_a_school_with_the_same_name_in_the_same_city_is_refused()
+    {
+        // Ajouter un directeur 4c
+        Ecole::factory()->create(['nom' => 'École El Amal', 'ville' => 'Sfax']);
+
+        $this->actingAs($this->admin)
+            ->post(route('directeurs.store'), $this->donnees())
+            ->assertSessionHasErrors(['ecole_nom' => 'Une école du même nom existe déjà dans cette ville.']);
+    }
+
+    public function test_updating_a_directeur_does_not_flag_his_own_school_as_a_duplicate()
+    {
+        $directeur = User::factory()->directeur()->create();
+        $ecole = $directeur->ecole;
+
+        $this->actingAs($this->admin)
+            ->patch(route('directeurs.update', $directeur), $this->donnees([
+                'email' => $directeur->email,
+                'ecole_nom' => $ecole->nom,
+                'ecole_ville' => $ecole->ville,
+            ]))
+            ->assertSessionHasNoErrors();
+    }
+
+    public function test_if_the_email_fails_the_directeur_is_created_and_the_email_can_be_resent()
+    {
+        Notification::shouldReceive('send')->andThrow(new RuntimeException('Serveur email injoignable'));
+
+        $this->actingAs($this->admin)
+            ->post(route('directeurs.store'), $this->donnees())
+            ->assertSessionHas('echecEnvoi');
+
+        $this->assertDatabaseHas('users', ['email' => 'nadia@example.com']);
+    }
+
+    public function test_the_email_of_a_directeur_can_be_sent_again()
+    {
+        Notification::fake();
+        $directeur = User::factory()->directeur()->create();
+
+        $this->actingAs($this->admin)
+            ->post(route('directeurs.identifiants', $directeur))
+            ->assertSessionHasNoErrors();
+
+        Notification::assertSentTo($directeur, CompteCreeNotification::class);
     }
 }

@@ -27,6 +27,10 @@ Route::middleware(['auth'])->group(function () {
         ->only(['index', 'store', 'update', 'destroy'])
         ->middleware('role:admin,directeur');
 
+    Route::post('enseignants/{enseignant}/identifiants', [EnseignantController::class, 'renvoyerIdentifiants'])
+        ->middleware('role:admin,directeur')
+        ->name('enseignants.identifiants');
+
     // Gérer les directeurs (Admin)
     Route::middleware('role:admin')->group(function () {
         Route::resource('directeurs', DirecteurController::class)
@@ -36,6 +40,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('directeurs.valider');
         Route::post('directeurs/{directeur}/refuser', [DirecteurController::class, 'refuser'])
             ->name('directeurs.refuser');
+        Route::post('directeurs/{directeur}/identifiants', [DirecteurController::class, 'renvoyerIdentifiants'])
+            ->name('directeurs.identifiants');
     });
 });
 
