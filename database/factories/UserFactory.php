@@ -37,7 +37,6 @@ class UserFactory extends Factory
             'role' => Role::Enseignant,
             'statut' => StatutCompte::Actif,
             'ecole_id' => null,
-            'specialite' => null,
             'remember_token' => Str::random(10),
         ];
     }
@@ -71,7 +70,6 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'role' => Role::Enseignant,
             'ecole_id' => $ecole->id ?? Ecole::factory(),
-            'specialite' => fake()->randomElement(['Mathématiques', 'Français', 'Arabe', 'Anglais', 'Sciences', 'Histoire-Géographie', 'Éducation physique']),
         ]);
     }
 

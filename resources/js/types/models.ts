@@ -11,7 +11,6 @@ export type Enseignant = {
     prenom: string;
     email: string;
     telephone: string | null;
-    specialite: string | null;
     statut: User['statut'];
     ecole_id: number | null;
     ecole: string | null;

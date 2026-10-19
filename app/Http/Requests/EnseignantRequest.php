@@ -25,7 +25,6 @@ class EnseignantRequest extends FormRequest
             'prenom' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique(User::class)->ignore($enseignant?->id)],
             'telephone' => ['nullable', 'string', 'max:20'],
-            'specialite' => ['required', 'string', 'max:255'],
             // Seul l'Admin choisit l'école ; le directeur ajoute toujours dans la sienne
             'ecole_id' => $this->user()->isAdmin()
                 ? ['required', 'integer', Rule::exists('ecoles', 'id')]

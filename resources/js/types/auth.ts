@@ -8,7 +8,6 @@ export type User = {
     role: 'admin' | 'directeur' | 'enseignant';
     statut: 'EN_ATTENTE' | 'ACTIF' | 'REFUSE' | 'DESACTIVE';
     ecole_id: number | null;
-    specialite: string | null;
     avatar?: string;
     email_verified_at: string | null;
     created_at: string;

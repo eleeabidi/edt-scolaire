@@ -155,7 +155,7 @@ function supprimer() {
                     <tr>
                         <th class="px-6 py-4 font-medium">Nom</th>
                         <th class="px-4 py-4 font-medium">Email</th>
-                        <th class="px-4 py-4 font-medium">Spécialité</th>
+                        <th class="px-4 py-4 font-medium">Téléphone</th>
                         <th v-if="estAdmin" class="px-4 py-4 font-medium">
                             École
                         </th>
@@ -182,7 +182,7 @@ function supprimer() {
                         </td>
                         <td class="px-4 py-3.5">{{ enseignant.email }}</td>
                         <td class="px-4 py-3.5">
-                            {{ enseignant.specialite ?? '—' }}
+                            {{ enseignant.telephone ?? '—' }}
                         </td>
                         <td v-if="estAdmin" class="px-4 py-3.5">
                             {{ enseignant.ecole ?? '—' }}
@@ -231,8 +231,11 @@ function supprimer() {
                         <p class="font-semibold">
                             {{ enseignant.prenom }} {{ enseignant.nom }}
                         </p>
-                        <p class="text-sm text-muted-foreground">
-                            {{ enseignant.specialite }}
+                        <p
+                            v-if="enseignant.telephone"
+                            class="text-sm text-muted-foreground"
+                        >
+                            {{ enseignant.telephone }}
                         </p>
                     </div>
                     <StatutBadge :statut="enseignant.statut" />

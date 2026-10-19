@@ -60,7 +60,6 @@ return [
         'password' => 'mot de passe',
         'password_confirmation' => 'confirmation du mot de passe',
         'current_password' => 'mot de passe actuel',
-        'specialite' => 'spécialité',
         'ecole_id' => 'école',
         'ecole_nom' => "nom de l'école",
         'ecole_adresse' => "adresse de l'école",

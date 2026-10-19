@@ -31,7 +31,6 @@ const form = useForm({
     prenom: '',
     email: '',
     telephone: '',
-    specialite: '',
     ecole_id: '' as number | '',
 });
 
@@ -49,7 +48,6 @@ watch(ouvert, (estOuvert) => {
         prenom: props.enseignant?.prenom ?? '',
         email: props.enseignant?.email ?? '',
         telephone: props.enseignant?.telephone ?? '',
-        specialite: props.enseignant?.specialite ?? '',
         ecole_id: props.enseignant?.ecole_id ?? '',
     });
     form.reset();
@@ -120,28 +118,15 @@ function enregistrer() {
                     <InputError :message="form.errors.email" />
                 </div>
 
-                <div class="grid gap-5 sm:grid-cols-2">
-                    <div class="grid gap-2">
-                        <Label for="ens-telephone">Téléphone</Label>
-                        <Input
-                            id="ens-telephone"
-                            placeholder="+216 00 000 000"
-                            v-model="form.telephone"
-                            type="tel"
-                        />
-                        <InputError :message="form.errors.telephone" />
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="ens-specialite">Spécialité</Label>
-                        <Input
-                            id="ens-specialite"
-                            v-model="form.specialite"
-                            required
-                            placeholder="Mathématiques"
-                        />
-                        <InputError :message="form.errors.specialite" />
-                    </div>
+                <div class="grid gap-2">
+                    <Label for="ens-telephone">Téléphone</Label>
+                    <Input
+                        id="ens-telephone"
+                        placeholder="+216 00 000 000"
+                        v-model="form.telephone"
+                        type="tel"
+                    />
+                    <InputError :message="form.errors.telephone" />
                 </div>
 
                 <!-- Seul l'Admin choisit l'école -->

@@ -40,7 +40,6 @@ class DatabaseSeeder extends Seeder
             'nom' => 'Trabelsi',
             'prenom' => 'Amira',
             'email' => 'enseignant@edt-scolaire.test',
-            'specialite' => 'Mathématiques',
         ]);
 
         User::factory(5)->enseignant($ecole)->create();

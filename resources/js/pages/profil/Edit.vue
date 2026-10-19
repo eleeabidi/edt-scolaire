@@ -26,11 +26,9 @@ defineOptions({
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 
-// Ex. : « Directeur · École Ibn Khaldoun » ou « Enseignant · Mathématiques »
+// Ex. : « Directeur · École Ibn Khaldoun » ou « Enseignant · École Les Jasmins »
 const description = computed(() =>
-    [props.role, user.value.specialite ?? props.ecole?.nom]
-        .filter(Boolean)
-        .join(' · '),
+    [props.role, props.ecole?.nom].filter(Boolean).join(' · '),
 );
 
 const motDePasseOuvert = ref(false);

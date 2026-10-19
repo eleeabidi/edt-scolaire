@@ -10,6 +10,7 @@ use App\Notifications\CompteCreeNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -27,7 +28,6 @@ class EnseignantTest extends TestCase
             'prenom' => 'Leila',
             'email' => 'leila@example.com',
             'telephone' => '22 555 666',
-            'specialite' => 'Physique',
             ...$remplacements,
         ];
     }
@@ -168,7 +168,15 @@ class EnseignantTest extends TestCase
             ->patch(route('enseignants.update', $enseignant), $this->donnees(['email' => $enseignant->email]))
             ->assertSessionHasNoErrors();
 
-        $this->assertSame('Physique', $enseignant->refresh()->specialite);
+        $enseignant->refresh();
+        $this->assertSame('Haddad', $enseignant->nom);
+        $this->assertSame('22 555 666', $enseignant->telephone);
+    }
+
+    public function test_a_teacher_has_no_specialite_anymore()
+    {
+        // Dictionnaire de données du sprint 1 : l'Enseignant n'a aucun attribut propre
+        $this->assertFalse(Schema::hasColumn('users', 'specialite'));
     }
 
     public function test_directeur_cannot_touch_a_teacher_of_another_school()

@@ -54,7 +54,7 @@ class ProfileUpdateTest extends TestCase
         $this->assertSame('22 111 222', $user->telephone);
     }
 
-    public function test_role_and_specialite_cannot_be_changed_from_the_profile()
+    public function test_role_cannot_be_changed_from_the_profile()
     {
         $user = User::factory()->enseignant()->create();
 
@@ -63,13 +63,11 @@ class ProfileUpdateTest extends TestCase
             'prenom' => 'Test',
             'email' => $user->email,
             'role' => 'admin',
-            'specialite' => 'Autre',
         ]);
 
         $user->refresh();
 
         $this->assertTrue($user->isEnseignant());
-        $this->assertNotSame('Autre', $user->specialite);
     }
 
     public function test_email_must_be_unique()

@@ -39,8 +39,7 @@ class EnseignantController extends Controller
             ->when($recherche, fn (Builder $q) => $q->where(fn (Builder $q) => $q
                 ->where('nom', 'like', "%{$recherche}%")
                 ->orWhere('prenom', 'like', "%{$recherche}%")
-                ->orWhere('email', 'like', "%{$recherche}%")
-                ->orWhere('specialite', 'like', "%{$recherche}%")))
+                ->orWhere('email', 'like', "%{$recherche}%")))
             ->with('ecole:id,nom')
             ->orderBy('nom')
             ->orderBy('prenom')
@@ -52,7 +51,6 @@ class EnseignantController extends Controller
                 'prenom' => $enseignant->prenom,
                 'email' => $enseignant->email,
                 'telephone' => $enseignant->telephone,
-                'specialite' => $enseignant->specialite,
                 'statut' => $enseignant->statut->value,
                 'ecole_id' => $enseignant->ecole_id,
                 'ecole' => $enseignant->ecole?->nom,
