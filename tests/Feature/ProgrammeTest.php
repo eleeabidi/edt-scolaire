@@ -55,9 +55,49 @@ class ProgrammeTest extends TestCase
     public function test_subjects_allowed_at_noon()
     {
         $this->assertEqualsCanonicalizing(
-            ['Éducation physique', 'Informatique', 'Éducation musicale', 'Éducation artistique'],
+            ['Éducation physique', 'Éducation technologique', 'Éducation musicale', 'Éducation artistique'],
             Matiere::where('autorisee_midi', true)->pluck('nom')->all(),
         );
+    }
+
+    public function test_the_volumes_are_those_of_the_decree()
+    {
+        $minutes = fn (string $matiere, int $niveau) => NiveauMatiere::where('niveau', $niveau)
+            ->whereHas('matiere', fn ($q) => $q->where('nom', $matiere))
+            ->value('minutes_par_semaine');
+
+        $this->assertSame(13, Matiere::count());
+        $this->assertSame(540, $minutes('Langue arabe', 1));
+        $this->assertSame(360, $minutes('Langue arabe', 4));
+        $this->assertSame(120, $minutes('Français', 2));
+        $this->assertSame(480, $minutes('Français', 3));
+        $this->assertSame(120, $minutes('Anglais', 6));
+        $this->assertSame(30, $minutes('Éducation musicale', 5));
+        $this->assertSame(40, $minutes('Histoire', 6));
+    }
+
+    public function test_a_subject_not_taught_at_a_level_has_no_volume_line()
+    {
+        // « — » dans le tableau : pas de français en 1re, pas d'anglais avant la 4e, pas d'histoire avant la 5e
+        $lignes = fn (string $matiere, int $niveau) => NiveauMatiere::where('niveau', $niveau)
+            ->whereHas('matiere', fn ($q) => $q->where('nom', $matiere))
+            ->count();
+
+        $this->assertSame(0, $lignes('Français', 1));
+        $this->assertSame(0, $lignes('Anglais', 3));
+        $this->assertSame(0, $lignes('Histoire', 4));
+        $this->assertSame(8, NiveauMatiere::where('niveau', 1)->count());
+        $this->assertSame(13, NiveauMatiere::where('niveau', 5)->count());
+    }
+
+    public function test_subjects_that_are_no_longer_in_the_programme_are_removed()
+    {
+        // Ex. : une matière des anciennes données d'exemple
+        Matiere::create(['nom' => 'Informatique']);
+
+        $this->seed(ProgrammeNationalSeeder::class);
+
+        $this->assertDatabaseMissing('matieres', ['nom' => 'Informatique']);
     }
 
     public function test_the_seeder_can_be_run_again_without_duplicates()

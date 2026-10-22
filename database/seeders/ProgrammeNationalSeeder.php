@@ -6,80 +6,45 @@ use App\Enums\TypeSalle;
 use App\Models\Matiere;
 use App\Models\NiveauMatiere;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 /**
- * T08.5 — Programme national : matières et volumes hebdomadaires par niveau
- * (décret n° 2019-1085, modifié par le décret n° 2021-143).
+ * T08.5 — Programme national : matières et volumes hebdomadaires par niveau.
  *
- * ⚠️ DONNÉES PROVISOIRES : les vrais volumes du décret seront fournis plus tard.
- * Ces valeurs d'exemple respectent seulement les totaux officiels par semaine :
- * 1re 20 h, 2e 22 h, 3e 25 h, 4e 25 h, 5e 28 h, 6e 28 h.
+ * Source : annexe n° 1 du décret n° 2019-1085 (JORT n° 95 du 26 novembre 2019, pages 4042 à 4047),
+ * modifié par le décret n° 2021-143. En 5e année, on applique l'observation de l'annexe :
+ * à partir de 2020/2021, 1 h d'éveil scientifique passe à l'anglais.
+ * La langue arabe est une seule matière (on ne gère pas ses activités : lecture, écriture…).
  *
  * Peut être relancé sans créer de doublons : php artisan db:seed --class=ProgrammeNationalSeeder
  */
 class ProgrammeNationalSeeder extends Seeder
 {
     /**
-     * Matières : [type de salle, autorisée de 12 h à 13 h].
+     * Tableau « Programme par niveau » : [type de salle, autorisée à midi, minutes par semaine du niveau 1 au niveau 6].
+     * null = la matière n'est pas enseignée à ce niveau (pas de ligne dans niveau_matiere).
      *
-     * @var array<string, array{TypeSalle, bool}>
+     * @var array<string, array{TypeSalle, bool, array<int, int|null>}>
      */
-    private const MATIERES = [
-        'Langue arabe' => [TypeSalle::Normale, false],
-        'Langue française' => [TypeSalle::Normale, false],
-        'Langue anglaise' => [TypeSalle::Normale, false],
-        'Mathématiques' => [TypeSalle::Normale, false],
-        'Éveil scientifique' => [TypeSalle::Normale, false],
-        'Éducation islamique' => [TypeSalle::Normale, false],
-        'Éducation civique' => [TypeSalle::Normale, false],
-        'Histoire-géographie' => [TypeSalle::Normale, false],
-        'Informatique' => [TypeSalle::Normale, true],
-        'Éducation musicale' => [TypeSalle::Normale, true],
-        'Éducation artistique' => [TypeSalle::Normale, true],
-        'Éducation physique' => [TypeSalle::Sport, true],
+    public const PROGRAMME = [
+        'Langue arabe' => [TypeSalle::Normale, false, [1 => 540, 2 => 540, 3 => 360, 4 => 360, 5 => 360, 6 => 360]],
+        'Mathématiques' => [TypeSalle::Normale, false, [1 => 300, 2 => 300, 3 => 300, 4 => 300, 5 => 300, 6 => 300]],
+        'Français' => [TypeSalle::Normale, false, [1 => null, 2 => 120, 3 => 480, 4 => 480, 5 => 480, 6 => 480]],
+        'Anglais' => [TypeSalle::Normale, false, [1 => null, 2 => null, 3 => null, 4 => 60, 5 => 60, 6 => 120]],
+        'Éveil scientifique' => [TypeSalle::Normale, false, [1 => 60, 2 => 60, 3 => 60, 4 => 60, 5 => 60, 6 => 60]],
+        'Éducation islamique' => [TypeSalle::Normale, false, [1 => 60, 2 => 60, 3 => 60, 4 => 60, 5 => 60, 6 => 60]],
+        'Éducation technologique' => [TypeSalle::Normale, true, [1 => 60, 2 => 60, 3 => 60, 4 => 60, 5 => 60, 6 => 60]],
+        'Éducation musicale' => [TypeSalle::Normale, true, [1 => 60, 2 => 60, 3 => 60, 4 => 30, 5 => 30, 6 => 30]],
+        'Éducation artistique' => [TypeSalle::Normale, true, [1 => 60, 2 => 60, 3 => 60, 4 => 30, 5 => 30, 6 => 30]],
+        'Éducation physique' => [TypeSalle::Sport, true, [1 => 60, 2 => 60, 3 => 60, 4 => 60, 5 => 60, 6 => 60]],
+        'Histoire' => [TypeSalle::Normale, false, [1 => null, 2 => null, 3 => null, 4 => null, 5 => 60, 6 => 40]],
+        'Géographie' => [TypeSalle::Normale, false, [1 => null, 2 => null, 3 => null, 4 => null, 5 => 60, 6 => 40]],
+        'Éducation civique' => [TypeSalle::Normale, false, [1 => null, 2 => null, 3 => null, 4 => null, 5 => 60, 6 => 40]],
     ];
 
     /**
-     * ⚠️ PROVISOIRE — volumes en minutes par semaine, niveau par niveau.
-     *
-     * @var array<int, array<string, int>>
-     */
-    public const VOLUMES_PROVISOIRES = [
-        1 => [ // total 1 200 min = 20 h (maquette 19)
-            'Langue arabe' => 540, 'Mathématiques' => 300, 'Éveil scientifique' => 120,
-            'Éducation islamique' => 60, 'Éducation artistique' => 60, 'Éducation physique' => 120,
-        ],
-        2 => [ // total 1 320 min = 22 h
-            'Langue arabe' => 480, 'Langue française' => 180, 'Mathématiques' => 300,
-            'Éveil scientifique' => 120, 'Éducation islamique' => 60, 'Éducation artistique' => 60,
-            'Éducation physique' => 120,
-        ],
-        3 => [ // total 1 500 min = 25 h
-            'Langue arabe' => 420, 'Langue française' => 270, 'Mathématiques' => 300,
-            'Éveil scientifique' => 150, 'Éducation islamique' => 60, 'Éducation civique' => 60,
-            'Éducation musicale' => 60, 'Éducation artistique' => 60, 'Éducation physique' => 120,
-        ],
-        4 => [ // total 1 500 min = 25 h
-            'Langue arabe' => 390, 'Langue française' => 300, 'Mathématiques' => 300,
-            'Éveil scientifique' => 150, 'Éducation islamique' => 60, 'Éducation civique' => 60,
-            'Informatique' => 60, 'Éducation artistique' => 60, 'Éducation physique' => 120,
-        ],
-        5 => [ // total 1 680 min = 28 h
-            'Langue arabe' => 390, 'Langue française' => 330, 'Langue anglaise' => 90,
-            'Mathématiques' => 300, 'Éveil scientifique' => 180, 'Éducation islamique' => 60,
-            'Histoire-géographie' => 90, 'Éducation civique' => 30, 'Informatique' => 60,
-            'Éducation musicale' => 30, 'Éducation physique' => 120,
-        ],
-        6 => [ // total 1 680 min = 28 h
-            'Langue arabe' => 390, 'Langue française' => 330, 'Langue anglaise' => 90,
-            'Mathématiques' => 300, 'Éveil scientifique' => 180, 'Éducation islamique' => 60,
-            'Histoire-géographie' => 90, 'Éducation civique' => 30, 'Informatique' => 60,
-            'Éducation musicale' => 30, 'Éducation physique' => 120,
-        ],
-    ];
-
-    /**
-     * Totaux officiels par semaine, en minutes.
+     * Dernière ligne du tableau : totaux officiels par semaine, en minutes.
      *
      * @var array<int, int>
      */
@@ -87,21 +52,46 @@ class ProgrammeNationalSeeder extends Seeder
 
     public function run(): void
     {
-        foreach (self::MATIERES as $nom => [$typeSalle, $autoriseeMidi]) {
-            Matiere::updateOrCreate(
-                ['nom' => $nom],
-                ['type_salle' => $typeSalle, 'autorisee_midi' => $autoriseeMidi],
-            );
-        }
+        $this->verifierTotaux();
 
-        $idsMatieres = Matiere::query()->pluck('id', 'nom');
+        DB::transaction(function () {
+            // Les matières qui ne sont plus dans le programme (ex. : anciennes données d'exemple) sont retirées,
+            // avec leurs volumes (suppression en cascade dans niveau_matiere)
+            Matiere::whereNotIn('nom', array_keys(self::PROGRAMME))->delete();
 
-        foreach (self::VOLUMES_PROVISOIRES as $niveau => $volumes) {
-            foreach ($volumes as $nom => $minutes) {
-                NiveauMatiere::updateOrCreate(
-                    ['niveau' => $niveau, 'matiere_id' => $idsMatieres[$nom]],
-                    ['minutes_par_semaine' => $minutes],
+            foreach (self::PROGRAMME as $nom => [$typeSalle, $autoriseeMidi, $volumes]) {
+                $matiere = Matiere::updateOrCreate(
+                    ['nom' => $nom],
+                    ['type_salle' => $typeSalle, 'autorisee_midi' => $autoriseeMidi],
                 );
+
+                foreach ($volumes as $niveau => $minutes) {
+                    if ($minutes === null) {
+                        // « — » : pas enseignée à ce niveau
+                        NiveauMatiere::where(['niveau' => $niveau, 'matiere_id' => $matiere->id])->delete();
+
+                        continue;
+                    }
+
+                    NiveauMatiere::updateOrCreate(
+                        ['niveau' => $niveau, 'matiere_id' => $matiere->id],
+                        ['minutes_par_semaine' => $minutes],
+                    );
+                }
+            }
+        });
+    }
+
+    /**
+     * Le total de chaque niveau doit être celui de la dernière ligne du tableau.
+     */
+    private function verifierTotaux(): void
+    {
+        foreach (self::TOTAUX_OFFICIELS as $niveau => $attendu) {
+            $total = array_sum(array_map(fn (array $ligne) => $ligne[2][$niveau] ?? 0, self::PROGRAMME));
+
+            if ($total !== $attendu) {
+                throw new RuntimeException("Programme national : le total du niveau {$niveau} est de {$total} min au lieu de {$attendu} min.");
             }
         }
     }

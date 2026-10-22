@@ -113,9 +113,9 @@ const niveau = computed(() =>
     </div>
 
     <InfoBox class="mt-6">
-        Le programme est chargé une fois dans l'application à partir du décret
-        n° 2019-1085 (modifié par le décret n° 2021-143). « Autorisée à midi »
-        indique si la matière peut être placée de 12 h à 13 h.
-        <strong>Données d'exemple, à remplacer par celles du décret.</strong>
+        Le programme est chargé une fois dans l'application à partir de l'annexe
+        n° 1 du décret n° 2019-1085 (modifié par le décret n° 2021-143). «
+        Autorisée à midi » indique si la matière peut être placée de 12 h à 13
+        h.
     </InfoBox>
 </template>
