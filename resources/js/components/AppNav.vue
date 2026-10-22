@@ -2,9 +2,11 @@
 import { Link, router, usePage } from '@inertiajs/vue3';
 import {
     BriefcaseBusiness,
+    DoorOpen,
     House,
     LibraryBig,
     LogOut,
+    Presentation,
     SlidersHorizontal,
     UserRound,
     Users,
@@ -14,11 +16,13 @@ import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard, home, logout } from '@/routes';
+import { index as classes } from '@/routes/classes';
 import { index as directeurs } from '@/routes/directeurs';
 import { index as enseignants } from '@/routes/enseignants';
 import { index as programme } from '@/routes/programme';
 import { edit as profil } from '@/routes/profile';
 import { index as regles } from '@/routes/regles';
+import { index as salles } from '@/routes/salles';
 
 type Lien = {
     titre: string;
@@ -53,9 +57,11 @@ const liens = computed<Lien[]>(() => {
         items.push({ titre: 'Enseignants', href: enseignants(), icone: Users });
     }
 
-    // Sprint 2 : consultation du programme et des règles nationales (directeur)
+    // Sprint 2 : données de l'école et consultation du programme et des règles (directeur)
     if (role === 'directeur') {
         items.push(
+            { titre: 'Classes', href: classes(), icone: Presentation },
+            { titre: 'Salles', href: salles(), icone: DoorOpen },
             { titre: 'Programme', href: programme(), icone: LibraryBig },
             { titre: 'Règles', href: regles(), icone: SlidersHorizontal },
         );

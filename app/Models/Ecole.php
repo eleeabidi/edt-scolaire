@@ -45,4 +45,20 @@ class Ecole extends Model
     {
         return $this->hasMany(User::class)->where('role', Role::Enseignant);
     }
+
+    /**
+     * @return HasMany<Salle, $this>
+     */
+    public function salles(): HasMany
+    {
+        return $this->hasMany(Salle::class);
+    }
+
+    /**
+     * @return HasMany<Classe, $this>
+     */
+    public function classes(): HasMany
+    {
+        return $this->hasMany(Classe::class);
+    }
 }

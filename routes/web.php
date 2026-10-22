@@ -1,11 +1,13 @@
 <?php
 
 use App\Enums\Role;
+use App\Http\Controllers\ClasseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirecteurController;
 use App\Http\Controllers\EnseignantController;
 use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\ReglesController;
+use App\Http\Controllers\SalleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +39,13 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:directeur')->group(function () {
         Route::get('programme', ProgrammeController::class)->name('programme.index');
         Route::get('regles', ReglesController::class)->name('regles.index');
+
+        // Salles, classes et groupes de l'école du directeur
+        Route::resource('salles', SalleController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('classes', ClasseController::class)
+            ->only(['index', 'store', 'update', 'destroy'])
+            ->parameters(['classes' => 'classe']);
+        Route::put('classes/{classe}/groupes', [ClasseController::class, 'groupes'])->name('classes.groupes');
     });
 
     // Gérer les directeurs (Admin)
