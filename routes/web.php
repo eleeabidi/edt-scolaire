@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirecteurController;
 use App\Http\Controllers\DisponibiliteController;
 use App\Http\Controllers\EnseignantController;
+use App\Http\Controllers\ImportController;
 use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\ReglesController;
 use App\Http\Controllers\SalleController;
@@ -58,6 +59,12 @@ Route::middleware(['auth'])->group(function () {
         // Disponibilités des enseignants
         Route::get('disponibilites', [DisponibiliteController::class, 'index'])->name('disponibilites.index');
         Route::put('disponibilites/{enseignant}', [DisponibiliteController::class, 'update'])->name('disponibilites.update');
+
+        // Import Excel/CSV des enseignants, des classes et des salles
+        Route::get('import', [ImportController::class, 'index'])->name('import.index');
+        Route::get('import/modele/{type}', [ImportController::class, 'modele'])->name('import.modele');
+        Route::post('import', [ImportController::class, 'store'])->name('import.store');
+        Route::get('import/rapport', [ImportController::class, 'rapport'])->name('import.rapport');
     });
 
     // Gérer les directeurs (Admin)

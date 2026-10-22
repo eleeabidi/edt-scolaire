@@ -9,6 +9,7 @@ import {
     LogOut,
     Presentation,
     SlidersHorizontal,
+    Upload,
     UserRound,
     Users,
 } from '@lucide/vue';
@@ -21,6 +22,7 @@ import { index as classes } from '@/routes/classes';
 import { index as directeurs } from '@/routes/directeurs';
 import { index as disponibilites } from '@/routes/disponibilites';
 import { index as enseignants } from '@/routes/enseignants';
+import { index as importer } from '@/routes/import';
 import { index as programme } from '@/routes/programme';
 import { edit as profil } from '@/routes/profile';
 import { index as regles } from '@/routes/regles';
@@ -71,6 +73,7 @@ const liens = computed<Lien[]>(() => {
             },
             { titre: 'Programme', href: programme(), icone: LibraryBig },
             { titre: 'Règles', href: regles(), icone: SlidersHorizontal },
+            { titre: 'Importer', href: importer(), icone: Upload },
         );
     }
 
