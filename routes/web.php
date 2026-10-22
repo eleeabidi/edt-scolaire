@@ -5,6 +5,7 @@ use App\Http\Controllers\AffectationController;
 use App\Http\Controllers\ClasseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirecteurController;
+use App\Http\Controllers\DisponibiliteController;
 use App\Http\Controllers\EnseignantController;
 use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\ReglesController;
@@ -53,6 +54,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('enseignants/{enseignant}/affectations', [AffectationController::class, 'store'])->name('affectations.store');
         Route::delete('enseignants/{enseignant}/affectations/{affectation}', [AffectationController::class, 'destroy'])->name('affectations.destroy');
         Route::patch('enseignants/{enseignant}/volume', [AffectationController::class, 'volume'])->name('affectations.volume');
+
+        // Disponibilités des enseignants
+        Route::get('disponibilites', [DisponibiliteController::class, 'index'])->name('disponibilites.index');
+        Route::put('disponibilites/{enseignant}', [DisponibiliteController::class, 'update'])->name('disponibilites.update');
     });
 
     // Gérer les directeurs (Admin)

@@ -2,6 +2,7 @@
 import { Link, router, usePage } from '@inertiajs/vue3';
 import {
     BriefcaseBusiness,
+    CalendarDays,
     DoorOpen,
     House,
     LibraryBig,
@@ -18,6 +19,7 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard, home, logout } from '@/routes';
 import { index as classes } from '@/routes/classes';
 import { index as directeurs } from '@/routes/directeurs';
+import { index as disponibilites } from '@/routes/disponibilites';
 import { index as enseignants } from '@/routes/enseignants';
 import { index as programme } from '@/routes/programme';
 import { edit as profil } from '@/routes/profile';
@@ -62,6 +64,11 @@ const liens = computed<Lien[]>(() => {
         items.push(
             { titre: 'Classes', href: classes(), icone: Presentation },
             { titre: 'Salles', href: salles(), icone: DoorOpen },
+            {
+                titre: 'Disponibilités',
+                href: disponibilites(),
+                icone: CalendarDays,
+            },
             { titre: 'Programme', href: programme(), icone: LibraryBig },
             { titre: 'Règles', href: regles(), icone: SlidersHorizontal },
         );

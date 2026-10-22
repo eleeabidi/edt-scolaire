@@ -89,6 +89,16 @@ class User extends Authenticatable
         return $this->hasMany(Affectation::class, 'enseignant_id');
     }
 
+    /**
+     * Les créneaux où l'enseignant est disponible (aucune ligne = disponible partout).
+     *
+     * @return HasMany<Disponibilite, $this>
+     */
+    public function disponibilites(): HasMany
+    {
+        return $this->hasMany(Disponibilite::class, 'enseignant_id');
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === Role::Admin;
