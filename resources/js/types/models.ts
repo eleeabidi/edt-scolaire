@@ -14,6 +14,11 @@ export type Enseignant = {
     statut: User['statut'];
     ecole_id: number | null;
     ecole: string | null;
+    // Directeur : affectations (remplacent la spécialité)
+    classes: string[];
+    matieres: string[];
+    minutes: number;
+    volume_horaire_max: number;
 };
 
 export type Ecole = {

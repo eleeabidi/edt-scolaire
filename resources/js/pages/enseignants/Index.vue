@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { Pencil, Plus, Search, Trash2 } from '@lucide/vue';
+import { Link2, Pencil, Plus, Search, Trash2 } from '@lucide/vue';
 import { watchDebounced } from '@vueuse/core';
 import { computed, ref } from 'vue';
 import BanniereEchecEnvoi from '@/components/BanniereEchecEnvoi.vue';
+import BarreHeures from '@/components/BarreHeures.vue';
 import BoutonIcone from '@/components/BoutonIcone.vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
 import EnseignantFormDialog from '@/components/enseignants/EnseignantFormDialog.vue';
+import InfoBox from '@/components/InfoBox.vue';
 import FiltrePastilles from '@/components/FiltrePastilles.vue';
 import Initiales from '@/components/Initiales.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -14,11 +16,12 @@ import PaginationLinks from '@/components/PaginationLinks.vue';
 import StatutBadge from '@/components/StatutBadge.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { show as affectations } from '@/routes/affectations';
 import { destroy, identifiants, index } from '@/routes/enseignants';
 import type { EcoleOption, Enseignant, Pagination } from '@/types';
 
-// Écran 08 — Enseignants (Admin et Directeur)
-type FiltreStatut = 'ACTIF' | 'DESACTIVE' | null;
+// Écran 08 (Admin) / 14 (Directeur, avec les affectations) — Enseignants
+type FiltreStatut = 'ACTIF' | 'DESACTIVE' | 'SANS_AFFECTATION' | null;
 
 const props = defineProps<{
     enseignants: Pagination<Enseignant>;
@@ -55,7 +58,20 @@ const pastilles: { valeur: FiltreStatut; libelle: string }[] = [
     { valeur: null, libelle: 'Tous' },
     { valeur: 'ACTIF', libelle: 'Actifs' },
     { valeur: 'DESACTIVE', libelle: 'Désactivés' },
+    // Le directeur voit aussi les enseignants sans affectation (maquette 14)
+    ...(props.estAdmin
+        ? []
+        : [
+              {
+                  valeur: 'SANS_AFFECTATION' as const,
+                  libelle: 'Sans affectation',
+              },
+          ]),
 ];
+
+// Liste courte des classes ou des matières (« Aucune » s'il n'y en a pas)
+const resume = (valeurs: string[]) =>
+    valeurs.length === 0 ? 'Aucune' : valeurs.join(', ');
 
 watchDebounced(
     [recherche, ecole, statut],
@@ -178,11 +194,16 @@ function supprimer() {
                 <thead class="bg-fond text-left text-muted-foreground">
                     <tr>
                         <th class="px-6 py-4 font-medium">Nom</th>
-                        <th class="px-4 py-4 font-medium">Email</th>
-                        <th class="px-4 py-4 font-medium">Téléphone</th>
-                        <th v-if="estAdmin" class="px-4 py-4 font-medium">
-                            École
-                        </th>
+                        <template v-if="estAdmin">
+                            <th class="px-4 py-4 font-medium">Email</th>
+                            <th class="px-4 py-4 font-medium">Téléphone</th>
+                            <th class="px-4 py-4 font-medium">École</th>
+                        </template>
+                        <template v-else>
+                            <th class="px-4 py-4 font-medium">Classes</th>
+                            <th class="px-4 py-4 font-medium">Matières</th>
+                            <th class="px-4 py-4 font-medium">Heures</th>
+                        </template>
                         <th class="px-4 py-4 font-medium">Statut</th>
                         <th class="px-4 py-4 font-medium">Actions</th>
                     </tr>
@@ -204,13 +225,45 @@ function supprimer() {
                                 </span>
                             </div>
                         </td>
-                        <td class="px-4 py-3.5">{{ enseignant.email }}</td>
-                        <td class="px-4 py-3.5">
-                            {{ enseignant.telephone ?? '—' }}
-                        </td>
-                        <td v-if="estAdmin" class="px-4 py-3.5">
-                            {{ enseignant.ecole ?? '—' }}
-                        </td>
+                        <template v-if="estAdmin">
+                            <td class="px-4 py-3.5">{{ enseignant.email }}</td>
+                            <td class="px-4 py-3.5">
+                                {{ enseignant.telephone ?? '—' }}
+                            </td>
+                            <td class="px-4 py-3.5">
+                                {{ enseignant.ecole ?? '—' }}
+                            </td>
+                        </template>
+                        <template v-else>
+                            <td
+                                class="max-w-48 truncate px-4 py-3.5"
+                                :class="{
+                                    'text-indice':
+                                        enseignant.classes.length === 0,
+                                }"
+                                :title="resume(enseignant.classes)"
+                            >
+                                {{ resume(enseignant.classes) }}
+                            </td>
+                            <td
+                                class="max-w-56 truncate px-4 py-3.5"
+                                :class="{
+                                    'text-indice':
+                                        enseignant.matieres.length === 0,
+                                }"
+                                :title="resume(enseignant.matieres)"
+                            >
+                                {{ resume(enseignant.matieres) }}
+                            </td>
+                            <td class="px-4 py-3.5">
+                                <BarreHeures
+                                    :minutes="enseignant.minutes"
+                                    :maximum-heures="
+                                        enseignant.volume_horaire_max
+                                    "
+                                />
+                            </td>
+                        </template>
                         <td class="px-4 py-3.5">
                             <StatutBadge :statut="enseignant.statut" />
                         </td>
@@ -219,6 +272,18 @@ function supprimer() {
                                 v-if="enseignant.statut !== 'DESACTIVE'"
                                 class="flex gap-2"
                             >
+                                <BoutonIcone
+                                    v-if="!estAdmin"
+                                    class="text-primary"
+                                    :libelle="`Affectations de ${enseignant.prenom} ${enseignant.nom}`"
+                                    @click="
+                                        router.visit(
+                                            affectations(enseignant.id),
+                                        )
+                                    "
+                                >
+                                    <Link2 />
+                                </BoutonIcone>
                                 <BoutonIcone
                                     :libelle="`Modifier ${enseignant.prenom} ${enseignant.nom}`"
                                     @click="modifier(enseignant)"
@@ -264,16 +329,36 @@ function supprimer() {
                     </div>
                     <StatutBadge :statut="enseignant.statut" />
                 </div>
-                <p class="mt-3 text-sm break-all text-muted-foreground">
-                    {{ enseignant.email }}
-                    <template v-if="estAdmin">
-                        · {{ enseignant.ecole }}</template
-                    >
+                <p
+                    v-if="estAdmin"
+                    class="mt-3 text-sm break-all text-muted-foreground"
+                >
+                    {{ enseignant.email }} · {{ enseignant.ecole }}
                 </p>
+                <div v-else class="mt-3 grid gap-2 text-sm">
+                    <p class="text-muted-foreground">
+                        {{ resume(enseignant.classes) }} ·
+                        {{ resume(enseignant.matieres) }}
+                    </p>
+                    <BarreHeures
+                        :minutes="enseignant.minutes"
+                        :maximum-heures="enseignant.volume_horaire_max"
+                    />
+                </div>
                 <div
                     v-if="enseignant.statut !== 'DESACTIVE'"
                     class="mt-3 flex gap-2"
                 >
+                    <Button
+                        v-if="!estAdmin"
+                        variant="outline"
+                        size="sm"
+                        class="flex-1"
+                        @click="router.visit(affectations(enseignant.id))"
+                    >
+                        <Link2 />
+                        Affectations
+                    </Button>
                     <Button
                         variant="outline"
                         size="sm"
@@ -297,6 +382,12 @@ function supprimer() {
         </div>
 
         <PaginationLinks class="mt-6" :pagination="enseignants" />
+
+        <InfoBox v-if="!estAdmin" class="mt-6">
+            Le bouton « Affectations » (icône lien) ouvre les classes et les
+            matières de l'enseignant. Un enseignant ne peut pas dépasser son
+            volume horaire maximum (18 h par défaut).
+        </InfoBox>
     </template>
 
     <EnseignantFormDialog

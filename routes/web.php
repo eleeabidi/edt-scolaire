@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Role;
+use App\Http\Controllers\AffectationController;
 use App\Http\Controllers\ClasseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirecteurController;
@@ -46,6 +47,12 @@ Route::middleware(['auth'])->group(function () {
             ->only(['index', 'store', 'update', 'destroy'])
             ->parameters(['classes' => 'classe']);
         Route::put('classes/{classe}/groupes', [ClasseController::class, 'groupes'])->name('classes.groupes');
+
+        // Affectations d'un enseignant et volume horaire maximum
+        Route::get('enseignants/{enseignant}/affectations', [AffectationController::class, 'show'])->name('affectations.show');
+        Route::post('enseignants/{enseignant}/affectations', [AffectationController::class, 'store'])->name('affectations.store');
+        Route::delete('enseignants/{enseignant}/affectations/{affectation}', [AffectationController::class, 'destroy'])->name('affectations.destroy');
+        Route::patch('enseignants/{enseignant}/volume', [AffectationController::class, 'volume'])->name('affectations.volume');
     });
 
     // Gérer les directeurs (Admin)

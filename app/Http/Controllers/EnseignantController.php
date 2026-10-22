@@ -6,7 +6,9 @@ use App\Concerns\EnvoieIdentifiants;
 use App\Enums\Role;
 use App\Enums\StatutCompte;
 use App\Http\Requests\EnseignantRequest;
+use App\Models\Affectation;
 use App\Models\Ecole;
+use App\Models\NiveauMatiere;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -31,17 +33,25 @@ class EnseignantController extends Controller
         $recherche = $request->string('q')->trim()->value();
         $ecoleId = $user->isAdmin() ? $request->integer('ecole') ?: null : null;
         $statut = StatutCompte::tryFrom($request->string('statut')->value());
+        // Filtre « Sans affectation » (directeur, maquette 14)
+        $sansAffectation = $user->isDirecteur() && $request->string('statut')->value() === 'SANS_AFFECTATION';
+
+        // Volumes du programme, pour calculer les heures affectées sans requête par enseignant
+        $volumes = $user->isDirecteur()
+            ? NiveauMatiere::all()->mapWithKeys(fn (NiveauMatiere $v) => ["{$v->niveau}-{$v->matiere_id}" => $v->minutes_par_semaine])
+            : collect();
 
         $enseignants = User::query()
             ->where('role', Role::Enseignant)
             ->when($user->isDirecteur(), fn (Builder $q) => $q->where('ecole_id', $user->ecole_id))
             ->when($ecoleId, fn (Builder $q) => $q->where('ecole_id', $ecoleId))
             ->when($statut, fn (Builder $q) => $q->where('statut', $statut))
+            ->when($sansAffectation, fn (Builder $q) => $q->whereDoesntHave('affectations'))
             ->when($recherche, fn (Builder $q) => $q->where(fn (Builder $q) => $q
                 ->where('nom', 'like', "%{$recherche}%")
                 ->orWhere('prenom', 'like', "%{$recherche}%")
                 ->orWhere('email', 'like', "%{$recherche}%")))
-            ->with('ecole:id,nom')
+            ->with(['ecole:id,nom', 'affectations.classe:id,nom,niveau', 'affectations.matiere:id,nom'])
             ->orderBy('nom')
             ->orderBy('prenom')
             ->paginate(10)
@@ -55,11 +65,18 @@ class EnseignantController extends Controller
                 'statut' => $enseignant->statut->value,
                 'ecole_id' => $enseignant->ecole_id,
                 'ecole' => $enseignant->ecole?->nom,
+                // Directeur : les affectations remplacent la spécialité (classes, matières, heures)
+                'classes' => $enseignant->affectations->pluck('classe.nom')->unique()->sort()->values(),
+                'matieres' => $enseignant->affectations->pluck('matiere.nom')->unique()->sort()->values(),
+                'minutes' => (int) $enseignant->affectations->sum(
+                    fn (Affectation $a) => $volumes->get("{$a->classe->niveau}-{$a->matiere_id}", 0),
+                ),
+                'volume_horaire_max' => $enseignant->volume_horaire_max,
             ]);
 
         return Inertia::render('enseignants/Index', [
             'enseignants' => $enseignants,
-            'filtres' => ['q' => $recherche, 'ecole' => $ecoleId, 'statut' => $statut?->value],
+            'filtres' => ['q' => $recherche, 'ecole' => $ecoleId, 'statut' => $sansAffectation ? 'SANS_AFFECTATION' : $statut?->value],
             'ecoleNom' => $user->ecole?->nom,
             'ecoles' => $user->isAdmin() ? Ecole::orderBy('nom')->get(['id', 'nom']) : [],
             'estAdmin' => $user->isAdmin(),

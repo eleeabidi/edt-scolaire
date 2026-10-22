@@ -4,7 +4,10 @@ namespace Database\Seeders;
 
 use App\Enums\StatutCompte;
 use App\Enums\TypeSalle;
+use App\Models\Classe;
 use App\Models\Ecole;
+use App\Models\Matiere;
+use App\Models\NiveauMatiere;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -40,18 +43,59 @@ class DatabaseSeeder extends Seeder
             'ecole_id' => $ecole->id,
         ]);
 
-        User::factory()->enseignant($ecole)->create([
+        $amira = User::factory()->enseignant($ecole)->create([
             'nom' => 'Trabelsi',
             'prenom' => 'Amira',
             'email' => 'enseignant@edt-scolaire.test',
         ]);
 
-        User::factory(5)->enseignant($ecole)->create();
+        $enseignants = User::factory(5)->enseignant($ecole)->create();
 
         // Deux inscriptions de directeurs en attente de validation
         User::factory(2)->directeur()->statut(StatutCompte::EnAttente)->create();
 
         $this->sallesEtClasses($ecole);
+        $this->affectations($ecole, $amira, $enseignants->all());
+    }
+
+    /**
+     * Sprint 2 : affectations de démonstration, selon l'organisation du backlog.
+     *
+     * @param  array<int, User>  $enseignants
+     */
+    private function affectations(Ecole $ecole, User $amira, array $enseignants): void
+    {
+        $classe = fn (string $nom) => $ecole->classes()->where('nom', $nom)->firstOrFail();
+        $matiere = fn (string $nom) => Matiere::where('nom', $nom)->firstOrFail();
+
+        $affecter = function (User $enseignant, Classe $classe, array $sauf = []) {
+            $niveau = NiveauMatiere::where('niveau', $classe->niveau)->with('matiere')->get();
+
+            foreach ($niveau as $volume) {
+                if (! in_array($volume->matiere->nom, $sauf, true)) {
+                    $enseignant->affectations()->create(['classe_id' => $classe->id, 'matiere_id' => $volume->matiere_id]);
+                }
+            }
+        };
+
+        // 1re année A : un enseignant principal pour tout sauf l'éducation physique (19 h)
+        $amira->update(['volume_horaire_max' => 19]);
+        $affecter($amira, $classe('1re année A'), ['Éducation physique']);
+
+        // 2e année A : un principal (tout sauf le français et l'éducation physique, 19 h)…
+        [$eps, $principal2e, $francais] = $enseignants;
+        $principal2e->update(['volume_horaire_max' => 19]);
+        $affecter($principal2e, $classe('2e année A'), ['Français', 'Éducation physique']);
+
+        // … un enseignant de français (2 h en 2e année, 8 h en 3e année A et B = 18 h)
+        foreach (['2e année A', '3e année A', '3e année B'] as $nom) {
+            $francais->affectations()->create(['classe_id' => $classe($nom)->id, 'matiere_id' => $matiere('Français')->id]);
+        }
+
+        // L'éducation physique a toujours son propre enseignant (1 h par classe)
+        foreach ($ecole->classes as $c) {
+            $eps->affectations()->create(['classe_id' => $c->id, 'matiere_id' => $matiere('Éducation physique')->id]);
+        }
     }
 
     /**

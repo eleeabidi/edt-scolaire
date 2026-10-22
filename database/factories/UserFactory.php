@@ -34,6 +34,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password1'),
             'telephone' => fake()->phoneNumber(),
+            'volume_horaire_max' => 18,
             'role' => Role::Enseignant,
             'statut' => StatutCompte::Actif,
             'ecole_id' => null,

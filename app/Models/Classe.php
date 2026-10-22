@@ -76,4 +76,14 @@ class Classe extends Model
     {
         return $this->hasMany(Groupe::class);
     }
+
+    /**
+     * Les affectations de la classe (supprimées avec elle).
+     *
+     * @return HasMany<Affectation, $this>
+     */
+    public function affectations(): HasMany
+    {
+        return $this->hasMany(Affectation::class);
+    }
 }

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -28,12 +29,13 @@ use Illuminate\Support\Carbon;
  * @property Role $role
  * @property StatutCompte $statut
  * @property int|null $ecole_id
+ * @property int $volume_horaire_max
  * @property string|null $motif_refus
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['nom', 'prenom', 'email', 'password', 'telephone', 'role', 'statut', 'ecole_id', 'motif_refus'])]
+#[Fillable(['nom', 'prenom', 'email', 'password', 'telephone', 'role', 'statut', 'ecole_id', 'volume_horaire_max', 'motif_refus'])]
 #[Hidden(['password', 'remember_token'])]
 #[Appends(['name'])]
 class User extends Authenticatable
@@ -53,6 +55,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => Role::class,
             'statut' => StatutCompte::class,
+            'volume_horaire_max' => 'integer',
         ];
     }
 
@@ -74,6 +77,16 @@ class User extends Authenticatable
     public function ecole(): BelongsTo
     {
         return $this->belongsTo(Ecole::class);
+    }
+
+    /**
+     * Les affectations d'un enseignant (classe + matière).
+     *
+     * @return HasMany<Affectation, $this>
+     */
+    public function affectations(): HasMany
+    {
+        return $this->hasMany(Affectation::class, 'enseignant_id');
     }
 
     public function isAdmin(): bool
