@@ -3,7 +3,9 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import {
     BriefcaseBusiness,
     House,
+    LibraryBig,
     LogOut,
+    SlidersHorizontal,
     UserRound,
     Users,
 } from '@lucide/vue';
@@ -14,7 +16,9 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard, home, logout } from '@/routes';
 import { index as directeurs } from '@/routes/directeurs';
 import { index as enseignants } from '@/routes/enseignants';
+import { index as programme } from '@/routes/programme';
 import { edit as profil } from '@/routes/profile';
+import { index as regles } from '@/routes/regles';
 
 type Lien = {
     titre: string;
@@ -47,6 +51,14 @@ const liens = computed<Lien[]>(() => {
 
     if (role === 'admin' || role === 'directeur') {
         items.push({ titre: 'Enseignants', href: enseignants(), icone: Users });
+    }
+
+    // Sprint 2 : consultation du programme et des règles nationales (directeur)
+    if (role === 'directeur') {
+        items.push(
+            { titre: 'Programme', href: programme(), icone: LibraryBig },
+            { titre: 'Règles', href: regles(), icone: SlidersHorizontal },
+        );
     }
 
     items.push({ titre: 'Mon profil', href: profil(), icone: UserRound });

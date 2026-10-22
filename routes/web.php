@@ -4,6 +4,8 @@ use App\Enums\Role;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirecteurController;
 use App\Http\Controllers\EnseignantController;
+use App\Http\Controllers\ProgrammeController;
+use App\Http\Controllers\ReglesController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +32,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('enseignants/{enseignant}/identifiants', [EnseignantController::class, 'renvoyerIdentifiants'])
         ->middleware('role:admin,directeur')
         ->name('enseignants.identifiants');
+
+    // Sprint 2 : programme national et règles (consultation seule, directeur)
+    Route::middleware('role:directeur')->group(function () {
+        Route::get('programme', ProgrammeController::class)->name('programme.index');
+        Route::get('regles', ReglesController::class)->name('regles.index');
+    });
 
     // Gérer les directeurs (Admin)
     Route::middleware('role:admin')->group(function () {

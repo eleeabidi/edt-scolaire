@@ -1,4 +1,4 @@
-<script setup lang="ts" generic="T extends string | null">
+<script setup lang="ts" generic="T extends string | number | null">
 // Boutons de filtre en forme de pastilles (ex. : Tous / Actifs / Désactivés)
 defineProps<{
     options: { valeur: T; libelle: string }[];

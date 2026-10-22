@@ -19,6 +19,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Sprint 2 : programme et règles nationales (communs à toutes les écoles)
+        $this->call([ProgrammeNationalSeeder::class, ReglesNationalesSeeder::class]);
+
         // L'administrateur de la plateforme
         User::factory()->admin()->create([
             'nom' => 'Admin',
