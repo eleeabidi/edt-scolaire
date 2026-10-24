@@ -20,7 +20,7 @@ class SalleFactory extends Factory
         return [
             'ecole_id' => Ecole::factory(),
             'nom' => 'Salle '.fake()->unique()->numberBetween(1, 999),
-            'type' => TypeSalle::Normale,
+            'type' => TypeSalle::Cours,
             'capacite' => fake()->randomElement([28, 30, 32]),
         ];
     }

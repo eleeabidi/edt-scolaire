@@ -3,14 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\Classe;
-use App\Models\Groupe;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 /**
- * T07.6 — Gestion des classes et des groupes.
+ * T07.5 — Gestion des classes : ajouter, modifier, supprimer (pas de groupes).
  */
 class ClasseTest extends TestCase
 {
@@ -115,56 +116,43 @@ class ClasseTest extends TestCase
             ->assertSessionHasErrors(['nom' => 'Une classe de ce nom existe déjà dans votre école.']);
     }
 
-    public function test_deleting_a_class_deletes_its_groups()
+    public function test_the_new_name_must_not_be_used_by_another_class_of_the_school()
+    {
+        Classe::factory()->create(['ecole_id' => $this->directeur->ecole_id, 'nom' => '3e année C']);
+        $classe = Classe::factory()->niveau(3)->create(['ecole_id' => $this->directeur->ecole_id, 'nom' => '3e année D']);
+
+        $this->actingAs($this->directeur)
+            ->patch(route('classes.update', $classe), $this->donnees())
+            ->assertSessionHasErrors(['nom' => 'Une classe de ce nom existe déjà dans votre école.']);
+    }
+
+    public function test_all_fields_are_required_and_the_size_is_a_positive_number()
+    {
+        $this->actingAs($this->directeur)
+            ->post(route('classes.store'), [])
+            ->assertSessionHasErrors(['nom', 'niveau', 'effectif']);
+
+        foreach ([0, -3, 'trente'] as $effectif) {
+            $this->actingAs($this->directeur)
+                ->post(route('classes.store'), $this->donnees(['effectif' => $effectif]))
+                ->assertSessionHasErrors('effectif');
+        }
+    }
+
+    public function test_the_directeur_deletes_a_class_of_his_school()
     {
         $classe = Classe::factory()->create(['ecole_id' => $this->directeur->ecole_id]);
-        Groupe::factory(2)->create(['classe_id' => $classe->id]);
 
-        $this->actingAs($this->directeur)->delete(route('classes.destroy', $classe));
+        $this->actingAs($this->directeur)->delete(route('classes.destroy', $classe))->assertSessionHasNoErrors();
 
         $this->assertModelMissing($classe);
-        $this->assertDatabaseCount('groupes', 0);
     }
 
-    public function test_the_groups_of_a_class_are_saved_at_once()
+    public function test_there_are_no_groups_and_no_in_service_state_for_classes()
     {
-        $classe = Classe::factory()->create(['ecole_id' => $this->directeur->ecole_id]);
-        [$garde, $retire] = Groupe::factory(2)->create(['classe_id' => $classe->id]);
-
-        $this->actingAs($this->directeur)
-            ->put(route('classes.groupes', $classe), ['groupes' => [
-                ['id' => $garde->id, 'nom' => 'Groupe A', 'effectif' => 15],
-                ['id' => null, 'nom' => 'Groupe B', 'effectif' => 14],
-            ]])
-            ->assertSessionHasNoErrors();
-
-        $this->assertSame(['Groupe A', 'Groupe B'], $classe->groupes()->orderBy('nom')->pluck('nom')->all());
-        $this->assertModelMissing($retire);
-        $this->assertSame(15, $garde->refresh()->effectif);
-    }
-
-    public function test_a_class_can_have_no_group()
-    {
-        $classe = Classe::factory()->create(['ecole_id' => $this->directeur->ecole_id]);
-        Groupe::factory()->create(['classe_id' => $classe->id]);
-
-        $this->actingAs($this->directeur)
-            ->put(route('classes.groupes', $classe), ['groupes' => []])
-            ->assertSessionHasNoErrors();
-
-        $this->assertSame(0, $classe->groupes()->count());
-    }
-
-    public function test_two_groups_cannot_have_the_same_name()
-    {
-        $classe = Classe::factory()->create(['ecole_id' => $this->directeur->ecole_id]);
-
-        $this->actingAs($this->directeur)
-            ->put(route('classes.groupes', $classe), ['groupes' => [
-                ['nom' => 'Groupe 1', 'effectif' => 15],
-                ['nom' => 'Groupe 1', 'effectif' => 15],
-            ]])
-            ->assertSessionHasErrors();
+        $this->assertFalse(Schema::hasTable('groupes'));
+        $this->assertFalse(Schema::hasColumn('classes', 'en_service'));
+        $this->assertFalse(Route::has('classes.groupes'));
     }
 
     public function test_the_directeur_cannot_touch_a_class_of_another_school()
@@ -172,7 +160,6 @@ class ClasseTest extends TestCase
         $autre = Classe::factory()->create();
 
         $this->actingAs($this->directeur)->patch(route('classes.update', $autre), $this->donnees())->assertForbidden();
-        $this->actingAs($this->directeur)->put(route('classes.groupes', $autre), ['groupes' => []])->assertForbidden();
         $this->actingAs($this->directeur)->delete(route('classes.destroy', $autre))->assertForbidden();
 
         $this->assertModelExists($autre);

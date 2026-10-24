@@ -106,7 +106,7 @@ class DisponibiliteTest extends TestCase
         $this->enregistrer($this->enseignant(), ['6-13:00'])->assertSessionHasErrors('indisponibles');
     }
 
-    public function test_a_warning_is_shown_when_available_hours_are_lower_than_assigned_hours()
+    public function test_the_directeur_must_confirm_when_available_hours_are_lower_than_assigned_hours()
     {
         $enseignant = $this->enseignant();
         $classe = Classe::factory()->niveau(3)->create(['ecole_id' => $this->directeur->ecole_id]);
@@ -122,10 +122,18 @@ class DisponibiliteTest extends TestCase
             ->values()
             ->all();
 
+        // Sans confirmation : avertissement, rien n'est enregistré
         $this->enregistrer($enseignant, $indisponibles)
+            ->assertSessionHasErrors(['confirme' => "Attention : 4 h disponibles pour 8 h affectées. Confirmez l'enregistrement ou corrigez la grille."]);
+        $this->assertSame(0, $enseignant->disponibilites()->count());
+
+        // Le directeur confirme : la grille est enregistrée
+        $this->actingAs($this->directeur)
+            ->put(route('disponibilites.update', $enseignant), ['indisponibles' => $indisponibles, 'confirme' => true])
             ->assertSessionHasNoErrors()
             ->assertInertiaFlash('toast.type', 'warning')
             ->assertInertiaFlash('toast.message', 'Disponibilités enregistrées, mais attention : 4 h disponibles pour 8 h affectées.');
+        $this->assertSame(2, $enseignant->disponibilites()->count());
     }
 
     public function test_the_directeur_cannot_edit_a_teacher_of_another_school_or_a_deactivated_teacher()

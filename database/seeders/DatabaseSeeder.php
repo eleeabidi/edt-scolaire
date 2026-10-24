@@ -99,14 +99,15 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
-     * Sprint 2 : salles, classes et groupes de l'école de démonstration.
+     * Sprint 2 : salles et classes de l'école de démonstration.
      */
     private function sallesEtClasses(Ecole $ecole): void
     {
         foreach (['Salle 1' => 32, 'Salle 2' => 30, 'Salle 3' => 30, 'Salle 4' => 28] as $nom => $capacite) {
-            $ecole->salles()->create(['nom' => $nom, 'type' => TypeSalle::Normale, 'capacite' => $capacite]);
+            $ecole->salles()->create(['nom' => $nom, 'type' => TypeSalle::Cours, 'capacite' => $capacite]);
         }
         $ecole->salles()->create(['nom' => 'Salle de sport', 'type' => TypeSalle::Sport, 'capacite' => 60]);
+        $ecole->salles()->create(['nom' => 'Salle informatique', 'type' => TypeSalle::Technologie, 'capacite' => 30]);
 
         // [nom, niveau, effectif, cours le samedi (choisi seulement en 3e année)]
         $classes = [
@@ -128,10 +129,5 @@ class DatabaseSeeder extends Seeder
                 'cours_samedi' => $coursSamedi,
             ]);
         }
-
-        $ecole->classes()->where('nom', '3e année A')->first()->groupes()->createMany([
-            ['nom' => 'Groupe 1', 'effectif' => 16],
-            ['nom' => 'Groupe 2', 'effectif' => 16],
-        ]);
     }
 }

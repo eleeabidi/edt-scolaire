@@ -45,11 +45,17 @@ class AffectationTest extends TestCase
         return Matiere::where('nom', $nom)->firstOrFail();
     }
 
-    private function affecter(User $enseignant, Classe $classe, string $matiere)
+    /**
+     * Affecte l'enseignant à une classe pour une ou plusieurs matières (avec, si besoin, un nouveau maximum).
+     *
+     * @param  string|array<int, string>  $matieres
+     */
+    private function affecter(User $enseignant, Classe $classe, string|array $matieres, array $autres = [])
     {
         return $this->actingAs($this->directeur)->post(route('affectations.store', $enseignant), [
             'classe_id' => $classe->id,
-            'matiere_id' => $this->matiere($matiere)->id,
+            'matieres' => array_map(fn (string $nom) => $this->matiere($nom)->id, (array) $matieres),
+            ...$autres,
         ]);
     }
 
@@ -95,7 +101,7 @@ class AffectationTest extends TestCase
         $this->affecter($this->enseignant(['nom' => 'Hammami', 'prenom' => 'Sonia']), $classe, 'Français');
 
         $this->affecter($this->enseignant(), $classe, 'Français')
-            ->assertSessionHasErrors(['matiere_id' => "Cette matière est déjà enseignée en {$classe->nom} par Sonia Hammami."]);
+            ->assertSessionHasErrors(['matieres' => "La matière « Français » est déjà enseignée en {$classe->nom} par Sonia Hammami."]);
 
         $this->assertSame(1, Affectation::count());
     }
@@ -108,7 +114,7 @@ class AffectationTest extends TestCase
 
         // Langue arabe en 6e année (6 h) → 22 h > 18 h : refusé avec le total et le maximum
         $this->affecter($enseignant, $this->classe(6), 'Langue arabe')
-            ->assertSessionHasErrors(['matiere_id' => 'Impossible : avec cette affectation, le total passerait à 22 h, au-delà du maximum de 18 h de cet enseignant.']);
+            ->assertSessionHasErrors(['matieres' => 'Impossible : avec cette affectation, le total passerait à 22 h, au-delà du maximum de 18 h de cet enseignant.']);
 
         $this->assertSame(960, Affectation::minutesPourEnseignant($enseignant->id));
     }
@@ -124,7 +130,7 @@ class AffectationTest extends TestCase
         foreach ($matieres as $matiere) {
             $reponse = $this->affecter($principal, $classe, $matiere);
         }
-        $reponse->assertSessionHasErrors(['matiere_id' => 'Impossible : avec cette affectation, le total passerait à 19 h, au-delà du maximum de 18 h de cet enseignant.']);
+        $reponse->assertSessionHasErrors(['matieres' => 'Impossible : avec cette affectation, le total passerait à 19 h, au-delà du maximum de 18 h de cet enseignant.']);
 
         // Le directeur monte son maximum à 19 h : l'affectation passe
         $this->actingAs($this->directeur)->patch(route('affectations.volume', $principal), ['volume_horaire_max' => 19])->assertSessionHasNoErrors();
@@ -154,7 +160,69 @@ class AffectationTest extends TestCase
     {
         // Pas de français en 1re année
         $this->affecter($this->enseignant(), $this->classe(1), 'Français')
-            ->assertSessionHasErrors(['matiere_id' => "Cette matière n'est pas enseignée en 1re année."]);
+            ->assertSessionHasErrors(['matieres' => "La matière « Français » n'est pas enseignée en 1re année."]);
+    }
+
+    public function test_the_directeur_assigns_several_subjects_of_a_class_at_once()
+    {
+        // 2e année : le principal reçoit ses 7 matières (19 h) en une fois, avec son maximum monté à 19 h
+        $principal = $this->enseignant();
+        $classe = $this->classe(2);
+        $matieres = ['Langue arabe', 'Mathématiques', 'Éveil scientifique', 'Éducation islamique', 'Éducation technologique', 'Éducation musicale', 'Éducation artistique'];
+
+        // Avec 18 h : refusé, rien n'est enregistré
+        $this->affecter($principal, $classe, $matieres)
+            ->assertSessionHasErrors(['matieres' => 'Impossible : avec ces affectations, le total passerait à 19 h, au-delà du maximum de 18 h de cet enseignant.']);
+        $this->assertSame(0, Affectation::count());
+
+        // Le directeur ajuste le maximum dans la même validation
+        $this->affecter($principal, $classe, $matieres, ['volume_horaire_max' => 19])->assertSessionHasNoErrors();
+
+        $this->assertSame(7, $principal->affectations()->count());
+        $this->assertSame(1140, Affectation::minutesPourEnseignant($principal->id));
+        $this->assertSame(19, $principal->refresh()->volume_horaire_max);
+    }
+
+    public function test_nothing_is_saved_when_one_chosen_subject_already_has_a_teacher()
+    {
+        $classe = $this->classe(3);
+        $this->affecter($this->enseignant(['nom' => 'Hammami', 'prenom' => 'Sonia']), $classe, 'Français');
+
+        $this->affecter($this->enseignant(), $classe, ['Mathématiques', 'Français'])
+            ->assertSessionHasErrors(['matieres' => "La matière « Français » est déjà enseignée en {$classe->nom} par Sonia Hammami."]);
+
+        $this->assertSame(1, Affectation::count());
+    }
+
+    public function test_at_least_one_subject_must_be_chosen()
+    {
+        $this->affecter($this->enseignant(), $this->classe(3), [])
+            ->assertSessionHasErrors(['matieres' => 'Choisissez au moins une matière.']);
+    }
+
+    public function test_an_empty_or_zero_maximum_volume_is_refused()
+    {
+        $enseignant = $this->enseignant();
+        $classe = $this->classe(3);
+
+        $this->affecter($enseignant, $classe, 'Français', ['volume_horaire_max' => ''])->assertSessionHasErrors('volume_horaire_max');
+        $this->affecter($enseignant, $classe, 'Français', ['volume_horaire_max' => 0])->assertSessionHasErrors('volume_horaire_max');
+        $this->assertSame(0, Affectation::count());
+
+        foreach (['', 0] as $valeur) {
+            $this->actingAs($this->directeur)
+                ->patch(route('affectations.volume', $enseignant), ['volume_horaire_max' => $valeur])
+                ->assertSessionHasErrors('volume_horaire_max');
+        }
+        $this->assertSame(18, $enseignant->refresh()->volume_horaire_max);
+    }
+
+    public function test_the_page_knows_when_the_school_has_no_class()
+    {
+        // 2a : aucune classe → la page invite à créer d'abord les classes
+        $this->actingAs($this->directeur)
+            ->get(route('affectations.show', $this->enseignant()))
+            ->assertInertia(fn (Assert $page) => $page->has('classes', 0));
     }
 
     public function test_no_assignment_for_a_class_of_another_school()

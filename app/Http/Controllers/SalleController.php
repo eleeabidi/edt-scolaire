@@ -12,7 +12,8 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * T09.4 — Gérer les salles (directeur, son école uniquement). Écran 17, fenêtres F10 et F11.
+ * T09.4 — Gérer les salles (directeur, son école uniquement) : mise en service, modification
+ * et mise hors service. Une salle n'est jamais supprimée. Écran 17, fenêtres F9 et F10.
  */
 class SalleController extends Controller
 {
@@ -33,6 +34,7 @@ class SalleController extends Controller
                 'nom' => $salle->nom,
                 'type' => $salle->type->value,
                 'capacite' => $salle->capacite,
+                'en_service' => $salle->en_service,
             ]);
 
         return Inertia::render('salles/Index', [
@@ -42,11 +44,14 @@ class SalleController extends Controller
         ]);
     }
 
+    /**
+     * « Mettre en service une salle » : la salle créée est en service.
+     */
     public function store(SalleRequest $request): RedirectResponse
     {
-        $request->user()->ecole->salles()->create($request->validated());
+        $request->user()->ecole->salles()->create([...$request->validated(), 'en_service' => true]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'La salle a été ajoutée.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'La salle a été mise en service.']);
 
         return back();
     }
@@ -62,13 +67,30 @@ class SalleController extends Controller
         return back();
     }
 
-    public function destroy(Request $request, Salle $salle): RedirectResponse
+    /**
+     * La salle reste dans la liste, mais ne sera plus utilisée pour la génération (sprint 3).
+     */
+    public function mettreHorsService(Request $request, Salle $salle): RedirectResponse
     {
         $this->verifierEcole($request, $salle);
 
-        $salle->delete();
+        $salle->update(['en_service' => false]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'La salle a été supprimée.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => "La salle {$salle->nom} a été mise hors service."]);
+
+        return back();
+    }
+
+    /**
+     * Une salle hors service redevient utilisable.
+     */
+    public function mettreEnService(Request $request, Salle $salle): RedirectResponse
+    {
+        $this->verifierEcole($request, $salle);
+
+        $salle->update(['en_service' => true]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => "La salle {$salle->nom} a été mise en service."]);
 
         return back();
     }

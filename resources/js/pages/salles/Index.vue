@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { Pencil, Plus, Search, Trash2 } from '@lucide/vue';
+import { Pencil, Plus, Search } from '@lucide/vue';
 import { watchDebounced } from '@vueuse/core';
 import { computed, ref } from 'vue';
 import BoutonIcone from '@/components/BoutonIcone.vue';
@@ -11,10 +11,12 @@ import PaginationLinks from '@/components/PaginationLinks.vue';
 import SalleFormDialog from '@/components/salles/SalleFormDialog.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { destroy, index } from '@/routes/salles';
+import { typesSalle } from '@/lib/format';
+import { enService, horsService, index } from '@/routes/salles';
 import type { Pagination, Salle, TypeSalle } from '@/types';
 
-// Écran 17 — Salles (directeur, son école)
+// Écran 17 — Salles (directeur, son école). Une salle n'est jamais supprimée :
+// elle est mise hors service (par exemple pendant des travaux), puis mise en service à nouveau.
 const props = defineProps<{
     salles: Pagination<Salle>;
     filtres: { q: string; type: TypeSalle | null };
@@ -40,8 +42,9 @@ const type = ref<TypeSalle | null>(props.filtres.type);
 
 const pastilles: { valeur: TypeSalle | null; libelle: string }[] = [
     { valeur: null, libelle: 'Tous' },
-    { valeur: 'normale', libelle: 'Normales' },
+    { valeur: 'cours', libelle: 'Cours' },
     { valeur: 'sport', libelle: 'Sport' },
+    { valeur: 'technologie', libelle: 'Technologie' },
 ];
 
 watchDebounced(
@@ -56,7 +59,7 @@ watchDebounced(
     { debounce: 300 },
 );
 
-// --- Fenêtre Ajouter / Modifier (F10) ---
+// --- Fenêtre Mettre en service une salle / Modifier (F9) ---
 const formulaireOuvert = ref(false);
 const salleEnCours = ref<Salle | null>(null);
 
@@ -70,29 +73,37 @@ function modifier(salle: Salle) {
     formulaireOuvert.value = true;
 }
 
-// --- Fenêtre Supprimer (F11) ---
-const aSupprimer = ref<Salle | null>(null);
+// --- Fenêtre Mettre hors service (F10) ou Mettre en service, après confirmation ---
+const salleAChanger = ref<Salle | null>(null);
 const confirmationOuverte = ref(false);
-const suppressionEnCours = ref(false);
+const changementEnCours = ref(false);
 
-function demanderSuppression(salle: Salle) {
-    aSupprimer.value = salle;
+function demanderChangement(salle: Salle) {
+    salleAChanger.value = salle;
     confirmationOuverte.value = true;
 }
 
-function supprimer() {
-    if (!aSupprimer.value) {
+function changerEtat() {
+    const salle = salleAChanger.value;
+
+    if (!salle) {
         return;
     }
 
-    router.delete(destroy.url(aSupprimer.value.id), {
-        preserveScroll: true,
-        onStart: () => (suppressionEnCours.value = true),
-        onFinish: () => {
-            suppressionEnCours.value = false;
-            confirmationOuverte.value = false;
+    const route = salle.en_service ? horsService : enService;
+
+    router.patch(
+        route.url(salle.id),
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => (changementEnCours.value = true),
+            onFinish: () => {
+                changementEnCours.value = false;
+                confirmationOuverte.value = false;
+            },
         },
-    });
+    );
 }
 </script>
 
@@ -102,7 +113,7 @@ function supprimer() {
     <PageHeader titre="Salles" :sous-titre="sousTitre">
         <Button @click="ajouter">
             <Plus />
-            Ajouter une salle
+            Mettre en service une salle
         </Button>
     </PageHeader>
 
@@ -134,7 +145,7 @@ function supprimer() {
         <p class="font-semibold">Aucune salle</p>
         <Button @click="ajouter">
             <Plus />
-            Ajouter une salle
+            Mettre en service une salle
         </Button>
     </div>
 
@@ -146,6 +157,7 @@ function supprimer() {
                         <th class="px-6 py-4 font-medium">Salle</th>
                         <th class="px-4 py-4 font-medium">Type</th>
                         <th class="px-4 py-4 font-medium">Capacité</th>
+                        <th class="px-4 py-4 font-medium">État</th>
                         <th class="px-4 py-4 font-medium">Actions</th>
                     </tr>
                 </thead>
@@ -161,33 +173,53 @@ function supprimer() {
                         <td class="px-4 py-3.5">
                             <span
                                 class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                                :class="
-                                    salle.type === 'sport'
-                                        ? 'bg-succes/15 text-[#1F8A6B]'
-                                        : 'bg-violet-clair text-primary'
-                                "
+                                :class="typesSalle[salle.type].classes"
                             >
-                                {{
-                                    salle.type === 'sport' ? 'Sport' : 'Normale'
-                                }}
+                                {{ typesSalle[salle.type].libelle }}
                             </span>
                         </td>
                         <td class="px-4 py-3.5">{{ salle.capacite }} élèves</td>
                         <td class="px-4 py-3.5">
-                            <div class="flex gap-2">
+                            <span
+                                class="rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap"
+                                :class="
+                                    salle.en_service
+                                        ? 'bg-succes/15 text-[#1F8A6B]'
+                                        : 'bg-erreur/15 text-[#C93D3D]'
+                                "
+                            >
+                                {{
+                                    salle.en_service
+                                        ? 'En service'
+                                        : 'Hors service'
+                                }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5">
+                            <div class="flex items-center gap-2">
                                 <BoutonIcone
                                     :libelle="`Modifier ${salle.nom}`"
                                     @click="modifier(salle)"
                                 >
                                     <Pencil />
                                 </BoutonIcone>
-                                <BoutonIcone
-                                    danger
-                                    :libelle="`Supprimer ${salle.nom}`"
-                                    @click="demanderSuppression(salle)"
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    class="whitespace-nowrap"
+                                    :class="
+                                        salle.en_service
+                                            ? 'text-[#C93D3D]'
+                                            : 'text-primary'
+                                    "
+                                    @click="demanderChangement(salle)"
                                 >
-                                    <Trash2 />
-                                </BoutonIcone>
+                                    {{
+                                        salle.en_service
+                                            ? 'Mettre hors service'
+                                            : 'Mettre en service'
+                                    }}
+                                </Button>
                             </div>
                         </td>
                     </tr>
@@ -201,11 +233,24 @@ function supprimer() {
     <SalleFormDialog v-model:open="formulaireOuvert" :salle="salleEnCours" />
 
     <ConfirmationDialog
+        v-if="salleAChanger?.en_service ?? true"
         v-model:open="confirmationOuverte"
-        titre="Supprimer cette salle ?"
-        :message="`La salle « ${aSupprimer?.nom} » sera supprimée. Une salle déjà utilisée dans un emploi du temps ne peut pas être supprimée.`"
-        libelle-confirmer="Supprimer"
-        :en-cours="suppressionEnCours"
-        @confirmer="supprimer"
+        titre="Mettre cette salle hors service ?"
+        :message="`La salle « ${salleAChanger?.nom} » ne sera plus utilisée pour les emplois du temps, par exemple pendant des travaux. Vous pourrez la mettre en service à nouveau à tout moment.`"
+        libelle-confirmer="Mettre hors service"
+        icone="alerte"
+        :en-cours="changementEnCours"
+        @confirmer="changerEtat"
+    />
+    <ConfirmationDialog
+        v-else
+        v-model:open="confirmationOuverte"
+        titre="Mettre cette salle en service ?"
+        :message="`La salle « ${salleAChanger?.nom} » sera de nouveau utilisée pour les emplois du temps.`"
+        libelle-confirmer="Mettre en service"
+        icone="service"
+        :danger="false"
+        :en-cours="changementEnCours"
+        @confirmer="changerEtat"
     />
 </template>

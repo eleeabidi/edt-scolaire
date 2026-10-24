@@ -35,6 +35,11 @@ defineOptions({
     layout: { titre: 'Enseignants' },
 });
 
+// Écran 14 : « Détails des enseignants » pour le directeur, « Enseignants » pour l'Admin (sprint 1)
+const titrePage = computed(() =>
+    props.estAdmin ? 'Enseignants' : 'Détails des enseignants',
+);
+
 const sousTitre = computed(() => {
     const total = `${props.enseignants.total} enseignant${props.enseignants.total > 1 ? 's' : ''}`;
 
@@ -130,9 +135,9 @@ function supprimer() {
 </script>
 
 <template>
-    <Head title="Enseignants" />
+    <Head :title="titrePage" />
 
-    <PageHeader titre="Enseignants" :sous-titre="sousTitre">
+    <PageHeader :titre="titrePage" :sous-titre="sousTitre">
         <Button @click="ajouter">
             <Plus />
             Ajouter un enseignant

@@ -11,17 +11,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * Salle d'une école : normale ou de sport.
+ * Salle d'une école : de cours, de sport ou de technologie ; jamais supprimée, mise hors service.
  *
  * @property int $id
  * @property int $ecole_id
  * @property string $nom
  * @property TypeSalle $type
  * @property int $capacite
+ * @property bool $en_service
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['ecole_id', 'nom', 'type', 'capacite'])]
+#[Fillable(['ecole_id', 'nom', 'type', 'capacite', 'en_service'])]
 class Salle extends Model
 {
     /** @use HasFactory<SalleFactory> */
@@ -31,7 +32,8 @@ class Salle extends Model
      * @var array<string, mixed>
      */
     protected $attributes = [
-        'type' => 'normale',
+        'type' => 'cours',
+        'en_service' => true,
     ];
 
     protected function casts(): array
@@ -39,6 +41,7 @@ class Salle extends Model
         return [
             'type' => TypeSalle::class,
             'capacite' => 'integer',
+            'en_service' => 'boolean',
         ];
     }
 

@@ -57,22 +57,35 @@ const liens = computed<Lien[]>(() => {
         );
     }
 
-    if (role === 'admin' || role === 'directeur') {
+    if (role === 'admin') {
         items.push({ titre: 'Enseignants', href: enseignants(), icone: Users });
     }
 
-    // Sprint 2 : données de l'école et consultation du programme et des règles (directeur)
+    // Sprint 2 : données de l'école, guide pédagogique et règles de gestion (directeur)
     if (role === 'directeur') {
         items.push(
+            {
+                titre: 'Détails des enseignants',
+                href: enseignants(),
+                icone: Users,
+            },
             { titre: 'Classes', href: classes(), icone: Presentation },
             { titre: 'Salles', href: salles(), icone: DoorOpen },
             {
-                titre: 'Disponibilités',
+                titre: 'Gestion des enseignants',
                 href: disponibilites(),
                 icone: CalendarDays,
             },
-            { titre: 'Programme', href: programme(), icone: LibraryBig },
-            { titre: 'Règles', href: regles(), icone: SlidersHorizontal },
+            {
+                titre: 'Guide pédagogique',
+                href: programme(),
+                icone: LibraryBig,
+            },
+            {
+                titre: 'Règles de gestion',
+                href: regles(),
+                icone: SlidersHorizontal,
+            },
             { titre: 'Importer', href: importer(), icone: Upload },
         );
     }

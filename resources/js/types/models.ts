@@ -40,19 +40,14 @@ export type Directeur = {
     ecole: Ecole | null;
 };
 
-export type TypeSalle = 'normale' | 'sport';
+export type TypeSalle = 'cours' | 'sport' | 'technologie';
 
 export type Salle = {
     id: number;
     nom: string;
     type: TypeSalle;
     capacite: number;
-};
-
-export type Groupe = {
-    id: number | null; // null = nouveau groupe pas encore enregistré
-    nom: string;
-    effectif: number;
+    en_service: boolean;
 };
 
 export type Classe = {
@@ -61,7 +56,6 @@ export type Classe = {
     niveau: number;
     effectif: number;
     cours_samedi: boolean;
-    groupes: Groupe[];
 };
 
 // Résultat paginé renvoyé par Laravel (->paginate())

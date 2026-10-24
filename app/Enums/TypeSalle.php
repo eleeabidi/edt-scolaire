@@ -3,19 +3,21 @@
 namespace App\Enums;
 
 /**
- * Type de salle : « normale » ou « sport » uniquement.
- * Utilisé par les matières (où les placer) et, à l'étape 2, par les salles.
+ * Type de salle : cours (par défaut), sport ou technologie.
+ * Utilisé par les matières (où les placer) et par les salles.
  */
 enum TypeSalle: string
 {
-    case Normale = 'normale';
+    case Cours = 'cours';
     case Sport = 'sport';
+    case Technologie = 'technologie';
 
     public function label(): string
     {
         return match ($this) {
-            self::Normale => 'Normale',
+            self::Cours => 'Cours',
             self::Sport => 'Sport',
+            self::Technologie => 'Technologie',
         };
     }
 }

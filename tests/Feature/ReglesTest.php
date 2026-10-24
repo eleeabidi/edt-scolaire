@@ -122,7 +122,21 @@ class ReglesTest extends TestCase
                 ->where('niveaux.0.coursSamedi', 'non')
                 ->where('niveaux.0.totalMinutes', 1200)
                 ->where('niveaux.2.coursSamedi', 'selon_classe')
+                ->where('niveaux.0.reglesPropres', true)
+                ->where('niveaux.5.reglesPropres', true)
                 ->has('matieresMidi', 4));
+    }
+
+    public function test_a_level_without_its_own_rule_says_that_the_general_rules_apply()
+    {
+        // 4a : on retire les règles propres de la 6e année (sauf le total par semaine)
+        Contrainte::where('niveau', 6)->where('type', '!=', 'total_hebdomadaire')->delete();
+
+        $this->actingAs(User::factory()->directeur()->create())
+            ->get(route('regles.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('niveaux.5.reglesPropres', false)
+                ->where('niveaux.4.reglesPropres', true));
     }
 
     public function test_only_the_directeur_can_consult_the_rules()

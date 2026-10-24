@@ -7,7 +7,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * T08.6 — Consultation du programme national par niveau (écran 19). Consultation seule.
+ * T08.6 — Consultation du guide pédagogique par niveau (écran 19). Consultation seule.
  */
 class ProgrammeController extends Controller
 {

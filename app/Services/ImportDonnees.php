@@ -5,19 +5,24 @@ namespace App\Services;
 use App\Concerns\EnvoieIdentifiants;
 use App\Enums\Role;
 use App\Enums\StatutCompte;
+use App\Enums\TypeSalle;
 use App\Models\User;
 use DateTimeInterface;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use OpenSpout\Reader\CSV\Options as OptionsCsv;
 use OpenSpout\Reader\CSV\Reader as LecteurCsv;
 use OpenSpout\Reader\XLSX\Reader as LecteurXlsx;
+use Throwable;
 
 /**
  * T12.4 — Lit, valide et enregistre les lignes d'un fichier Excel (.xlsx) ou CSV.
  * La première ligne contient les titres des colonnes (voir les modèles à télécharger).
+ * Un fichier vide, illisible ou dont les colonnes ne correspondent pas au modèle est refusé :
+ * rien n'est importé. Sinon, chaque ligne invalide est ignorée et listée dans le rapport.
  */
 class ImportDonnees
 {
@@ -29,14 +34,23 @@ class ImportDonnees
     private int $emailsNonEnvoyes = 0;
 
     /**
-     * Colonnes de chaque modèle de fichier (T12.1).
+     * Colonnes de chaque modèle de fichier (T12.1), dans l'ordre de la ligne de titres.
      *
      * @var array<string, array<int, string>>
      */
     public const COLONNES = [
         'enseignants' => ['nom', 'prenom', 'email', 'telephone'],
-        'classes' => ['nom', 'niveau', 'effectif', 'cours_samedi'],
+        'classes' => ['nom', 'niveau', 'effectif', 'cours le samedi'],
         'salles' => ['nom', 'type', 'capacite'],
+    ];
+
+    /**
+     * Autres écritures acceptées pour un titre de colonne (titre normalisé → nom utilisé).
+     *
+     * @var array<string, string>
+     */
+    private const ALIAS = [
+        'cours_le_samedi' => 'cours_samedi',
     ];
 
     /**
@@ -47,7 +61,7 @@ class ImportDonnees
     public const EXEMPLES = [
         'enseignants' => ['Trabelsi', 'Leila', 'leila.trabelsi@ecole.tn', '+216 98 765 432'],
         'classes' => ['3e année A', 3, 30, 'oui'],
-        'salles' => ['Salle 1', 'normale', 30],
+        'salles' => ['Salle 1', 'cours', 30],
     ];
 
     /**
@@ -57,12 +71,34 @@ class ImportDonnees
      */
     public function importer(string $type, string $chemin, string $extension, string $nomFichier, User $directeur): array
     {
+        ['titres' => $titres, 'lignes' => $lignes] = $this->lireFichier($chemin, $extension);
+
+        // 3a : fichier vide (ni titres ni lignes)
+        if ($titres === [] || $lignes === []) {
+            throw ValidationException::withMessages([
+                'fichier' => 'Le fichier est vide : remplissez le modèle, puis envoyez-le à nouveau.',
+            ]);
+        }
+
+        // 4a : les colonnes doivent être exactement celles du modèle (l'ordre peut changer)
+        $attendues = array_map(fn (string $t) => $this->normaliserTitre($t), self::COLONNES[$type]);
+        $presentes = array_values(array_filter($titres, fn (string $t) => $t !== ''));
+        sort($attendues);
+        sort($presentes);
+
+        if ($presentes !== $attendues) {
+            throw ValidationException::withMessages([
+                'fichier' => 'Les colonnes du fichier ne correspondent pas au modèle (attendues : '
+                    .implode(', ', self::COLONNES[$type]).'). Rien n\'a été importé.',
+            ]);
+        }
+
         $this->emailsNonEnvoyes = 0;
         $lignesLues = 0;
         $importees = 0;
         $erreurs = [];
 
-        foreach ($this->lireLignes($chemin, $extension) as $numero => $ligne) {
+        foreach ($lignes as $numero => $ligne) {
             $lignesLues++;
 
             $erreur = match ($type) {
@@ -97,12 +133,30 @@ class ImportDonnees
     }
 
     /**
-     * Lit le fichier : renvoie les lignes non vides, indexées par leur numéro dans le fichier
-     * (la ligne 1 contient les titres), avec les colonnes nommées d'après la ligne de titres.
+     * Lit le fichier : renvoie les titres des colonnes (normalisés) et les lignes non vides,
+     * indexées par leur numéro dans le fichier (la ligne 1 contient les titres).
      *
-     * @return array<int, array<string, string>>
+     * @return array{titres: array<int, string>, lignes: array<int, array<string, string>>}
      */
-    public function lireLignes(string $chemin, string $extension): array
+    private function lireFichier(string $chemin, string $extension): array
+    {
+        if ((int) filesize($chemin) === 0) {
+            return ['titres' => [], 'lignes' => []];
+        }
+
+        try {
+            return $this->lire($chemin, $extension);
+        } catch (Throwable) {
+            throw ValidationException::withMessages([
+                'fichier' => "Ce fichier n'est ni un fichier Excel ni un fichier CSV lisible.",
+            ]);
+        }
+    }
+
+    /**
+     * @return array{titres: array<int, string>, lignes: array<int, array<string, string>>}
+     */
+    private function lire(string $chemin, string $extension): array
     {
         $lecteur = $extension === 'csv' ? $this->lecteurCsv($chemin) : new LecteurXlsx;
         $lecteur->open($chemin);
@@ -115,8 +169,11 @@ class ImportDonnees
                 $valeurs = array_map(fn (mixed $valeur) => $this->texte($valeur), $ligne->toArray());
 
                 if ($titres === null) {
-                    // « Prénom » → « prenom », « Cours samedi » → « cours_samedi »
-                    $titres = array_map(fn (string $t) => Str::of($t)->ascii()->lower()->trim()->replace(' ', '_')->value(), $valeurs);
+                    if (implode('', $valeurs) === '') {
+                        continue; // lignes vides avant les titres
+                    }
+
+                    $titres = array_map(fn (string $t) => $this->normaliserTitre($t), $valeurs);
 
                     continue;
                 }
@@ -136,7 +193,17 @@ class ImportDonnees
 
         $lecteur->close();
 
-        return $lignes;
+        return ['titres' => $titres ?? [], 'lignes' => $lignes];
+    }
+
+    /**
+     * « Prénom » → « prenom », « Capacité » → « capacite », « cours le samedi » → « cours_samedi ».
+     */
+    private function normaliserTitre(string $titre): string
+    {
+        $titre = Str::of($titre)->ascii()->lower()->trim()->replaceMatches('/\s+/', '_')->value();
+
+        return self::ALIAS[$titre] ?? $titre;
     }
 
     /**
@@ -213,7 +280,7 @@ class ImportDonnees
     }
 
     /**
-     * Salle de l'école du directeur : type normale ou sport.
+     * Salle de l'école du directeur : type cours, sport ou technologie ; elle est en service.
      *
      * @param  array<string, string>  $ligne
      */
@@ -223,11 +290,11 @@ class ImportDonnees
 
         $erreur = $this->valider($ligne, [
             'nom' => ['required', 'string', 'max:255', Rule::unique('salles', 'nom')->where('ecole_id', $directeur->ecole_id)],
-            'type' => ['required', Rule::in(['normale', 'sport'])],
+            'type' => ['required', Rule::enum(TypeSalle::class)],
             'capacite' => ['required', 'integer', 'min:1', 'max:500'],
         ], [
             'nom.unique' => 'Une salle de ce nom existe déjà dans votre école',
-            'type.in' => 'Le type doit être « normale » ou « sport »',
+            'type.enum' => 'Le type doit être « cours », « sport » ou « technologie »',
         ]);
 
         if ($erreur !== null) {
@@ -238,6 +305,7 @@ class ImportDonnees
             'nom' => $ligne['nom'],
             'type' => $ligne['type'],
             'capacite' => (int) $ligne['capacite'],
+            'en_service' => true,
         ]);
 
         return null;

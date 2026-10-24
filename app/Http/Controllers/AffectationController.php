@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Affectation;
 use App\Models\Classe;
+use App\Models\Matiere;
 use App\Models\NiveauMatiere;
 use App\Models\User;
 use App\Support\Duree;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -82,7 +84,8 @@ class AffectationController extends Controller
     }
 
     /**
-     * Ajoute une affectation (classe + matière) à l'enseignant.
+     * Affecte l'enseignant à une classe pour une ou plusieurs matières, avec le volume horaire
+     * maximum ajusté si besoin. Tout est vérifié avant d'enregistrer : rien n'est créé en cas de refus.
      */
     public function store(Request $request, User $enseignant): RedirectResponse
     {
@@ -90,45 +93,63 @@ class AffectationController extends Controller
 
         $request->validate([
             'classe_id' => ['required', 'integer', Rule::exists('classes', 'id')->where('ecole_id', $request->user()->ecole_id)],
-            'matiere_id' => ['required', 'integer', Rule::exists('matieres', 'id')],
+            'matieres' => ['required', 'array', 'min:1'],
+            'matieres.*' => ['integer', 'distinct', Rule::exists('matieres', 'id')],
+            'volume_horaire_max' => ['sometimes', 'required', 'integer', 'min:1', 'max:40'],
         ], [
             'classe_id.exists' => "Cette classe n'existe pas dans votre école.",
+            'matieres.required' => 'Choisissez au moins une matière.',
         ], [
             'classe_id' => 'classe',
-            'matiere_id' => 'matière',
+            'volume_horaire_max' => 'volume horaire maximum',
         ]);
 
         $classe = Classe::findOrFail($request->integer('classe_id'));
-        $matiereId = $request->integer('matiere_id');
-        $minutes = Affectation::minutesDuProgramme($classe, $matiereId);
+        $maximum = $request->has('volume_horaire_max') ? $request->integer('volume_horaire_max') : $enseignant->volume_horaire_max;
+        $matieres = Matiere::whereIn('id', $request->collect('matieres')->map(fn (mixed $id) => (int) $id))->orderBy('nom')->get();
+        $minutes = 0;
 
-        // La matière doit faire partie du programme du niveau de la classe
-        if ($minutes === 0) {
-            throw ValidationException::withMessages([
-                'matiere_id' => "Cette matière n'est pas enseignée en {$this->libelleNiveau($classe->niveau)}.",
-            ]);
+        foreach ($matieres as $matiere) {
+            $volume = Affectation::minutesDuProgramme($classe, $matiere->id);
+
+            // La matière doit faire partie du guide pédagogique du niveau de la classe
+            if ($volume === 0) {
+                throw ValidationException::withMessages([
+                    'matieres' => "La matière « {$matiere->nom} » n'est pas enseignée en {$this->libelleNiveau($classe->niveau)}.",
+                ]);
+            }
+
+            // Une matière d'une classe n'a qu'un seul enseignant (4a : le message indique lequel)
+            $existante = Affectation::where('classe_id', $classe->id)->where('matiere_id', $matiere->id)->with('enseignant')->first();
+            if ($existante) {
+                throw ValidationException::withMessages([
+                    'matieres' => "La matière « {$matiere->nom} » est déjà enseignée en {$classe->nom} par {$existante->enseignant->name}.",
+                ]);
+            }
+
+            $minutes += $volume;
         }
 
-        // Une matière d'une classe n'a qu'un seul enseignant
-        $existante = Affectation::where('classe_id', $classe->id)->where('matiere_id', $matiereId)->with('enseignant')->first();
-        if ($existante) {
-            throw ValidationException::withMessages([
-                'matiere_id' => "Cette matière est déjà enseignée en {$classe->nom} par {$existante->enseignant->name}.",
-            ]);
-        }
-
-        // Le total ne dépasse jamais le volume horaire maximum de l'enseignant
+        // 4b : le total ne dépasse jamais le volume horaire maximum de l'enseignant
         $total = Affectation::minutesPourEnseignant($enseignant->id) + $minutes;
-        if ($total > $enseignant->volume_horaire_max * 60) {
+        if ($total > $maximum * 60) {
             throw ValidationException::withMessages([
-                'matiere_id' => 'Impossible : avec cette affectation, le total passerait à '.Duree::format($total)
-                    .", au-delà du maximum de {$enseignant->volume_horaire_max} h de cet enseignant.",
+                'matieres' => 'Impossible : avec '.($matieres->count() > 1 ? 'ces affectations' : 'cette affectation')
+                    .', le total passerait à '.Duree::format($total).", au-delà du maximum de {$maximum} h de cet enseignant.",
             ]);
         }
 
-        $enseignant->affectations()->create(['classe_id' => $classe->id, 'matiere_id' => $matiereId]);
+        DB::transaction(function () use ($enseignant, $classe, $matieres, $maximum) {
+            $enseignant->update(['volume_horaire_max' => $maximum]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => "L'affectation a été ajoutée."]);
+            foreach ($matieres as $matiere) {
+                $enseignant->affectations()->create(['classe_id' => $classe->id, 'matiere_id' => $matiere->id]);
+            }
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $matieres->count() > 1
+            ? "Les {$matieres->count()} affectations ont été ajoutées."
+            : "L'affectation a été ajoutée."]);
 
         return back();
     }

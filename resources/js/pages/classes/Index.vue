@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { Pencil, Plus, Search, Trash2, Users } from '@lucide/vue';
+import { Pencil, Plus, Search, Trash2 } from '@lucide/vue';
 import { watchDebounced } from '@vueuse/core';
 import { computed, ref } from 'vue';
 import BoutonIcone from '@/components/BoutonIcone.vue';
 import ClasseFormDialog from '@/components/classes/ClasseFormDialog.vue';
-import GroupesDialog from '@/components/classes/GroupesDialog.vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
 import FiltrePastilles from '@/components/FiltrePastilles.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -77,29 +76,10 @@ function modifier(classe: Classe) {
     formulaireOuvert.value = true;
 }
 
-// --- Fenêtre Groupes (F8) ---
-const groupesOuvert = ref(false);
-const classeDesGroupes = ref<Classe | null>(null);
-
-function gererGroupes(classe: Classe) {
-    classeDesGroupes.value = classe;
-    groupesOuvert.value = true;
-}
-
-// --- Fenêtre Supprimer (F9) ---
+// --- Fenêtre Supprimer (F8) ---
 const aSupprimer = ref<Classe | null>(null);
 const confirmationOuverte = ref(false);
 const suppressionEnCours = ref(false);
-
-const messageSuppression = computed(() => {
-    const nombre = aSupprimer.value?.groupes.length ?? 0;
-    const groupes =
-        nombre === 0
-            ? ''
-            : `, avec ${nombre === 1 ? 'son groupe' : `ses ${nombre} groupes`}`;
-
-    return `La classe ${aSupprimer.value?.nom} sera supprimée${groupes} et les affectations de ses enseignants.`;
-});
 
 function demanderSuppression(classe: Classe) {
     aSupprimer.value = classe;
@@ -172,7 +152,6 @@ function supprimer() {
                         <th class="px-6 py-4 font-medium">Classe</th>
                         <th class="px-4 py-4 font-medium">Niveau</th>
                         <th class="px-4 py-4 font-medium">Effectif</th>
-                        <th class="px-4 py-4 font-medium">Groupes</th>
                         <th class="px-4 py-4 font-medium">Cours le samedi</th>
                         <th class="px-4 py-4 font-medium">Actions</th>
                     </tr>
@@ -190,7 +169,6 @@ function supprimer() {
                             {{ libelleNiveau(classe.niveau) }}
                         </td>
                         <td class="px-4 py-3.5">{{ classe.effectif }}</td>
-                        <td class="px-4 py-3.5">{{ classe.groupes.length }}</td>
                         <td class="px-4 py-3.5">
                             <span
                                 class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
@@ -212,13 +190,6 @@ function supprimer() {
                                     <Pencil />
                                 </BoutonIcone>
                                 <BoutonIcone
-                                    class="text-primary"
-                                    :libelle="`Groupes de la ${classe.nom}`"
-                                    @click="gererGroupes(classe)"
-                                >
-                                    <Users />
-                                </BoutonIcone>
-                                <BoutonIcone
                                     danger
                                     :libelle="`Supprimer ${classe.nom}`"
                                     @click="demanderSuppression(classe)"
@@ -237,12 +208,10 @@ function supprimer() {
 
     <ClasseFormDialog v-model:open="formulaireOuvert" :classe="classeEnCours" />
 
-    <GroupesDialog v-model:open="groupesOuvert" :classe="classeDesGroupes" />
-
     <ConfirmationDialog
         v-model:open="confirmationOuverte"
         titre="Supprimer cette classe ?"
-        :message="messageSuppression"
+        :message="`La classe ${aSupprimer?.nom} sera supprimée, avec les affectations de ses enseignants.`"
         libelle-confirmer="Supprimer"
         :en-cours="suppressionEnCours"
         @confirmer="supprimer"

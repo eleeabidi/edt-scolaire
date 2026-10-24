@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { TriangleAlert } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
+import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,7 +10,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { formatDuree, formatHeure } from '@/lib/format';
 import { index, update } from '@/routes/disponibilites';
 
-// Écran 18 — Disponibilités (directeur, enseignants actifs de son école)
+// Écran 18 — Gestion des enseignants : disponibilités (directeur, enseignants actifs de son école)
 type Creneau = {
     cle: string; // « jour-heure de début », ex. « 1-08:00 »
     jour: number;
@@ -28,7 +29,7 @@ const props = defineProps<{
 }>();
 
 defineOptions({
-    layout: { titre: 'Disponibilités' },
+    layout: { titre: 'Gestion des enseignants' },
 });
 
 const jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
@@ -94,30 +95,57 @@ const minutesDisponibles = computed(() =>
         .reduce((total, c) => total + c.minutes, 0),
 );
 
-const enregistrement = ref(false);
+// La grille a-t-elle été modifiée depuis le dernier enregistrement ?
+const modifiee = computed(
+    () =>
+        indisponibles.value.size !== props.indisponibles.length ||
+        props.indisponibles.some((cle) => !indisponibles.value.has(cle)),
+);
 
+// 3a : annuler les modifications, rien n'est enregistré
+function annuler() {
+    indisponibles.value = new Set(props.indisponibles);
+}
+
+const enregistrement = ref(false);
+const confirmationOuverte = ref(false);
+
+// 4a : moins d'heures disponibles que d'heures affectées → confirmer ou corriger la grille
 function enregistrer() {
+    if (minutesDisponibles.value < props.minutesAffectees) {
+        confirmationOuverte.value = true;
+
+        return;
+    }
+
+    envoyer(false);
+}
+
+function envoyer(confirme: boolean) {
     if (!props.enseignantId) {
         return;
     }
 
     router.put(
         update.url(props.enseignantId),
-        { indisponibles: [...indisponibles.value] },
+        { indisponibles: [...indisponibles.value], confirme },
         {
             preserveScroll: true,
             onStart: () => (enregistrement.value = true),
-            onFinish: () => (enregistrement.value = false),
+            onFinish: () => {
+                enregistrement.value = false;
+                confirmationOuverte.value = false;
+            },
         },
     );
 }
 </script>
 
 <template>
-    <Head title="Disponibilités" />
+    <Head title="Gestion des enseignants" />
 
     <PageHeader
-        titre="Disponibilités"
+        titre="Gestion des enseignants"
         sous-titre="Cliquez sur les créneaux où l'enseignant n'est pas disponible."
     />
 
@@ -278,10 +306,31 @@ function enregistrer() {
                     Pas de cours (samedi après-midi)
                 </span>
             </div>
-            <Button :disabled="enregistrement" @click="enregistrer">
-                <Spinner v-if="enregistrement" />
-                Enregistrer
-            </Button>
+            <div class="flex flex-col-reverse gap-3 sm:flex-row">
+                <Button
+                    variant="outline"
+                    :disabled="enregistrement || !modifiee"
+                    @click="annuler"
+                >
+                    Annuler
+                </Button>
+                <Button :disabled="enregistrement" @click="enregistrer">
+                    <Spinner v-if="enregistrement" />
+                    Enregistrer
+                </Button>
+            </div>
         </div>
     </template>
+
+    <ConfirmationDialog
+        v-model:open="confirmationOuverte"
+        titre="Enregistrer quand même ?"
+        :message="`L'enseignant n'aurait que ${formatDuree(minutesDisponibles)} disponibles pour ${formatDuree(minutesAffectees)} affectées : la génération ne pourra pas placer toutes ses heures.`"
+        libelle-confirmer="Enregistrer quand même"
+        libelle-annuler="Corriger la grille"
+        icone="alerte"
+        :danger="false"
+        :en-cours="enregistrement"
+        @confirmer="envoyer(true)"
+    />
 </template>

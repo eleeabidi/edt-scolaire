@@ -1,19 +1,26 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { CalendarDays, Check, Clock, SlidersHorizontal } from '@lucide/vue';
+import {
+    CalendarDays,
+    Check,
+    Clock,
+    Info,
+    SlidersHorizontal,
+} from '@lucide/vue';
 import { computed, ref } from 'vue';
 import FiltrePastilles from '@/components/FiltrePastilles.vue';
 import InfoBox from '@/components/InfoBox.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { formatDuree, formatHeure, libelleNiveau } from '@/lib/format';
 
-// Écran 20 — Règles de l'emploi du temps (consultation seule)
+// Écran 20 — Règles de gestion des emplois du temps (consultation seule)
 type Creneau = { debut: string; fin: string };
 
 type NiveauRegles = {
     niveau: number;
     regles: string[];
     totalMinutes: number;
+    reglesPropres: boolean;
     coursSamedi: 'oui' | 'non' | 'selon_classe';
 };
 
@@ -34,7 +41,7 @@ const props = defineProps<{
 }>();
 
 defineOptions({
-    layout: { titre: 'Règles' },
+    layout: { titre: 'Règles de gestion' },
 });
 
 // « 08:00-17:00 » → ['08:00', '17:00']
@@ -95,10 +102,10 @@ const recreations = computed(() =>
 </script>
 
 <template>
-    <Head title="Règles de l'emploi du temps" />
+    <Head title="Règles de gestion des emplois du temps" />
 
     <PageHeader
-        titre="Règles de l'emploi du temps"
+        titre="Règles de gestion des emplois du temps"
         sous-titre="Règles nationales que la génération respectera. Consultation seule."
     />
 
@@ -129,6 +136,14 @@ const recreations = computed(() =>
             <h3 class="text-xl font-bold">
                 Règles propres à la {{ libelleNiveau(niveau.niveau) }}
             </h3>
+            <p
+                v-if="!niveau.reglesPropres"
+                class="mt-4 flex items-start gap-3 rounded-xl bg-violet-clair px-4 py-3 text-sm"
+            >
+                <Info class="mt-0.5 size-5 shrink-0 text-primary" />
+                Ce niveau n'a pas de règle propre : les règles générales
+                s'appliquent.
+            </p>
             <ul class="mt-4 grid gap-3 text-[15px]">
                 <li class="flex items-start gap-3">
                     <Check class="mt-0.5 size-5 shrink-0 text-succes" />

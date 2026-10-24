@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Trash2 } from '@lucide/vue';
+import { Power, Trash2, TriangleAlert } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -12,14 +12,25 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 
 // Fenêtre F3 « Supprimer ce compte ? » (réutilisable)
+// icone : corbeille (suppression), alerte (mise hors service) ou marche (mise en service)
+// danger : bouton rouge (par défaut) ou bouton principal violet
 withDefaults(
     defineProps<{
         titre: string;
         message: string;
         libelleConfirmer?: string;
+        libelleAnnuler?: string;
         enCours?: boolean;
+        icone?: 'supprimer' | 'alerte' | 'service';
+        danger?: boolean;
     }>(),
-    { libelleConfirmer: 'Confirmer', enCours: false },
+    {
+        libelleConfirmer: 'Confirmer',
+        libelleAnnuler: 'Annuler',
+        enCours: false,
+        icone: 'supprimer',
+        danger: true,
+    },
 );
 
 const ouvert = defineModel<boolean>('open', { required: true });
@@ -31,9 +42,16 @@ const emit = defineEmits<{ confirmer: [] }>();
     <Dialog v-model:open="ouvert">
         <DialogContent>
             <div
-                class="flex size-14 items-center justify-center rounded-2xl bg-erreur/15 text-erreur"
+                class="flex size-14 items-center justify-center rounded-2xl"
+                :class="
+                    danger
+                        ? 'bg-erreur/15 text-erreur'
+                        : 'bg-violet-clair text-primary'
+                "
             >
-                <Trash2 class="size-5" />
+                <TriangleAlert v-if="icone === 'alerte'" class="size-5" />
+                <Power v-else-if="icone === 'service'" class="size-5" />
+                <Trash2 v-else class="size-5" />
             </div>
             <DialogHeader>
                 <DialogTitle>{{ titre }}</DialogTitle>
@@ -44,10 +62,10 @@ const emit = defineEmits<{ confirmer: [] }>();
 
             <DialogFooter class="gap-3">
                 <Button variant="outline" @click="ouvert = false">
-                    Annuler
+                    {{ libelleAnnuler }}
                 </Button>
                 <Button
-                    variant="destructive"
+                    :variant="danger ? 'destructive' : 'default'"
                     :disabled="enCours"
                     @click="emit('confirmer')"
                 >

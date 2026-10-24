@@ -17,7 +17,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * T10.3 / T10.4 — Disponibilités des enseignants (écran 18). Directeur, enseignants actifs de son école.
+ * T10.3 / T10.4 — Gestion des enseignants : leurs disponibilités (écran 18). Directeur, enseignants actifs de son école.
  * La table stocke les créneaux disponibles ; un enseignant sans aucune ligne est disponible partout.
  * Dans la grille, le directeur clique les créneaux où l'enseignant n'est pas disponible.
  */
@@ -63,6 +63,8 @@ class DisponibiliteController extends Controller
 
     /**
      * Enregistre la grille : la liste des créneaux indisponibles (« jour-heure de début »).
+     * 4a : si les heures disponibles sont inférieures aux heures affectées, le directeur doit
+     * confirmer l'enregistrement (« confirme » = vrai) ; sinon rien n'est enregistré.
      */
     public function update(Request $request, User $enseignant): RedirectResponse
     {
@@ -72,6 +74,7 @@ class DisponibiliteController extends Controller
         $request->validate([
             'indisponibles' => ['present', 'array'],
             'indisponibles.*' => ['string'],
+            'confirme' => ['sometimes', 'boolean'],
         ]);
 
         $creneaux = collect($this->creneaux());
@@ -83,6 +86,16 @@ class DisponibiliteController extends Controller
         }
 
         $disponibles = $creneaux->reject(fn (array $c) => $indisponibles->contains($c['cle']));
+        $minutesDisponibles = (int) $disponibles->sum('minutes');
+        $minutesAffectees = Affectation::minutesPourEnseignant($enseignant->id);
+        $insuffisant = $minutesDisponibles < $minutesAffectees;
+
+        if ($insuffisant && ! $request->boolean('confirme')) {
+            throw ValidationException::withMessages([
+                'confirme' => 'Attention : '.Duree::format($minutesDisponibles).' disponibles pour '
+                    .Duree::format($minutesAffectees).' affectées. Confirmez l\'enregistrement ou corrigez la grille.',
+            ]);
+        }
 
         DB::transaction(function () use ($enseignant, $indisponibles, $disponibles) {
             $enseignant->disponibilites()->delete();
@@ -97,11 +110,7 @@ class DisponibiliteController extends Controller
             }
         });
 
-        // Avertissement si les heures disponibles sont inférieures aux heures affectées
-        $minutesDisponibles = (int) $disponibles->sum('minutes');
-        $minutesAffectees = Affectation::minutesPourEnseignant($enseignant->id);
-
-        Inertia::flash('toast', $minutesDisponibles < $minutesAffectees
+        Inertia::flash('toast', $insuffisant
             ? ['type' => 'warning', 'message' => 'Disponibilités enregistrées, mais attention : '.Duree::format($minutesDisponibles)
                 .' disponibles pour '.Duree::format($minutesAffectees).' affectées.']
             : ['type' => 'success', 'message' => 'Les disponibilités ont été enregistrées.']);

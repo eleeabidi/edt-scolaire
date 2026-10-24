@@ -13,7 +13,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 /**
- * T08.7 — Chargement et consultation du programme national.
+ * T08.7 — Chargement et consultation du guide pédagogique.
  */
 class ProgrammeTest extends TestCase
 {
@@ -50,6 +50,13 @@ class ProgrammeTest extends TestCase
     public function test_only_physical_education_needs_a_sport_room()
     {
         $this->assertSame(['Éducation physique'], Matiere::where('type_salle', TypeSalle::Sport)->pluck('nom')->all());
+    }
+
+    public function test_technology_needs_a_technology_room_and_the_others_a_classroom()
+    {
+        $this->assertSame(['Éducation technologique'], Matiere::where('type_salle', TypeSalle::Technologie)->pluck('nom')->all());
+        $this->assertSame(11, Matiere::where('type_salle', TypeSalle::Cours)->count());
+        $this->assertSame(0, Matiere::whereNotIn('type_salle', ['cours', 'sport', 'technologie'])->count());
     }
 
     public function test_subjects_allowed_at_noon()
@@ -122,7 +129,10 @@ class ProgrammeTest extends TestCase
                 ->where('niveaux.0.niveau', 1)
                 ->where('niveaux.0.totalMinutes', 1200)
                 ->where('niveaux.0.matieres.0.nom', 'Langue arabe')
-                ->where('niveaux.0.matieres.0.minutes', 540));
+                ->where('niveaux.0.matieres.0.minutes', 540)
+                ->where('niveaux.0.matieres.0.typeSalle', 'cours'));
+
+        $this->assertSame('/guide-pedagogique', route('programme.index', absolute: false));
     }
 
     public function test_only_the_directeur_can_consult_the_programme()

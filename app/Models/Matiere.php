@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
- * Matière du programme national (commune à toutes les écoles, consultation seule).
+ * Matière du guide pédagogique (commune à toutes les écoles, consultation seule).
  *
  * @property int $id
  * @property string $nom
@@ -25,7 +25,7 @@ class Matiere extends Model
      * @var array<string, mixed>
      */
     protected $attributes = [
-        'type_salle' => 'normale',
+        'type_salle' => 'cours',
         'autorisee_midi' => false,
     ];
 

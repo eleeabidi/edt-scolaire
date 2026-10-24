@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
- * T08.5 — Programme national : matières et volumes hebdomadaires par niveau.
+ * T08.5 — Guide pédagogique : matières et volumes hebdomadaires par niveau.
  *
  * Source : annexe n° 1 du décret n° 2019-1085 (JORT n° 95 du 26 novembre 2019, pages 4042 à 4047),
  * modifié par le décret n° 2021-143. En 5e année, on applique l'observation de l'annexe :
@@ -22,25 +22,25 @@ use RuntimeException;
 class ProgrammeNationalSeeder extends Seeder
 {
     /**
-     * Tableau « Programme par niveau » : [type de salle, autorisée à midi, minutes par semaine du niveau 1 au niveau 6].
+     * Tableau « Guide pédagogique par niveau » : [type de salle, autorisée à midi, minutes par semaine du niveau 1 au niveau 6].
      * null = la matière n'est pas enseignée à ce niveau (pas de ligne dans niveau_matiere).
      *
      * @var array<string, array{TypeSalle, bool, array<int, int|null>}>
      */
     public const PROGRAMME = [
-        'Langue arabe' => [TypeSalle::Normale, false, [1 => 540, 2 => 540, 3 => 360, 4 => 360, 5 => 360, 6 => 360]],
-        'Mathématiques' => [TypeSalle::Normale, false, [1 => 300, 2 => 300, 3 => 300, 4 => 300, 5 => 300, 6 => 300]],
-        'Français' => [TypeSalle::Normale, false, [1 => null, 2 => 120, 3 => 480, 4 => 480, 5 => 480, 6 => 480]],
-        'Anglais' => [TypeSalle::Normale, false, [1 => null, 2 => null, 3 => null, 4 => 60, 5 => 60, 6 => 120]],
-        'Éveil scientifique' => [TypeSalle::Normale, false, [1 => 60, 2 => 60, 3 => 60, 4 => 60, 5 => 60, 6 => 60]],
-        'Éducation islamique' => [TypeSalle::Normale, false, [1 => 60, 2 => 60, 3 => 60, 4 => 60, 5 => 60, 6 => 60]],
-        'Éducation technologique' => [TypeSalle::Normale, true, [1 => 60, 2 => 60, 3 => 60, 4 => 60, 5 => 60, 6 => 60]],
-        'Éducation musicale' => [TypeSalle::Normale, true, [1 => 60, 2 => 60, 3 => 60, 4 => 30, 5 => 30, 6 => 30]],
-        'Éducation artistique' => [TypeSalle::Normale, true, [1 => 60, 2 => 60, 3 => 60, 4 => 30, 5 => 30, 6 => 30]],
+        'Langue arabe' => [TypeSalle::Cours, false, [1 => 540, 2 => 540, 3 => 360, 4 => 360, 5 => 360, 6 => 360]],
+        'Mathématiques' => [TypeSalle::Cours, false, [1 => 300, 2 => 300, 3 => 300, 4 => 300, 5 => 300, 6 => 300]],
+        'Français' => [TypeSalle::Cours, false, [1 => null, 2 => 120, 3 => 480, 4 => 480, 5 => 480, 6 => 480]],
+        'Anglais' => [TypeSalle::Cours, false, [1 => null, 2 => null, 3 => null, 4 => 60, 5 => 60, 6 => 120]],
+        'Éveil scientifique' => [TypeSalle::Cours, false, [1 => 60, 2 => 60, 3 => 60, 4 => 60, 5 => 60, 6 => 60]],
+        'Éducation islamique' => [TypeSalle::Cours, false, [1 => 60, 2 => 60, 3 => 60, 4 => 60, 5 => 60, 6 => 60]],
+        'Éducation technologique' => [TypeSalle::Technologie, true, [1 => 60, 2 => 60, 3 => 60, 4 => 60, 5 => 60, 6 => 60]],
+        'Éducation musicale' => [TypeSalle::Cours, true, [1 => 60, 2 => 60, 3 => 60, 4 => 30, 5 => 30, 6 => 30]],
+        'Éducation artistique' => [TypeSalle::Cours, true, [1 => 60, 2 => 60, 3 => 60, 4 => 30, 5 => 30, 6 => 30]],
         'Éducation physique' => [TypeSalle::Sport, true, [1 => 60, 2 => 60, 3 => 60, 4 => 60, 5 => 60, 6 => 60]],
-        'Histoire' => [TypeSalle::Normale, false, [1 => null, 2 => null, 3 => null, 4 => null, 5 => 60, 6 => 40]],
-        'Géographie' => [TypeSalle::Normale, false, [1 => null, 2 => null, 3 => null, 4 => null, 5 => 60, 6 => 40]],
-        'Éducation civique' => [TypeSalle::Normale, false, [1 => null, 2 => null, 3 => null, 4 => null, 5 => 60, 6 => 40]],
+        'Histoire' => [TypeSalle::Cours, false, [1 => null, 2 => null, 3 => null, 4 => null, 5 => 60, 6 => 40]],
+        'Géographie' => [TypeSalle::Cours, false, [1 => null, 2 => null, 3 => null, 4 => null, 5 => 60, 6 => 40]],
+        'Éducation civique' => [TypeSalle::Cours, false, [1 => null, 2 => null, 3 => null, 4 => null, 5 => 60, 6 => 40]],
     ];
 
     /**
@@ -91,7 +91,7 @@ class ProgrammeNationalSeeder extends Seeder
             $total = array_sum(array_map(fn (array $ligne) => $ligne[2][$niveau] ?? 0, self::PROGRAMME));
 
             if ($total !== $attendu) {
-                throw new RuntimeException("Programme national : le total du niveau {$niveau} est de {$total} min au lieu de {$attendu} min.");
+                throw new RuntimeException("Guide pédagogique : le total du niveau {$niveau} est de {$total} min au lieu de {$attendu} min.");
             }
         }
     }

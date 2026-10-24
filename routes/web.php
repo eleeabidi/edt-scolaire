@@ -38,17 +38,18 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('role:admin,directeur')
         ->name('enseignants.identifiants');
 
-    // Sprint 2 : programme national et règles (consultation seule, directeur)
+    // Sprint 2 : guide pédagogique et règles de gestion (consultation seule, directeur)
     Route::middleware('role:directeur')->group(function () {
-        Route::get('programme', ProgrammeController::class)->name('programme.index');
+        Route::get('guide-pedagogique', ProgrammeController::class)->name('programme.index');
         Route::get('regles', ReglesController::class)->name('regles.index');
 
-        // Salles, classes et groupes de l'école du directeur
-        Route::resource('salles', SalleController::class)->only(['index', 'store', 'update', 'destroy']);
+        // Salles (jamais supprimées : mises hors service) et classes de l'école du directeur
+        Route::resource('salles', SalleController::class)->only(['index', 'store', 'update']);
+        Route::patch('salles/{salle}/hors-service', [SalleController::class, 'mettreHorsService'])->name('salles.hors-service');
+        Route::patch('salles/{salle}/en-service', [SalleController::class, 'mettreEnService'])->name('salles.en-service');
         Route::resource('classes', ClasseController::class)
             ->only(['index', 'store', 'update', 'destroy'])
             ->parameters(['classes' => 'classe']);
-        Route::put('classes/{classe}/groupes', [ClasseController::class, 'groupes'])->name('classes.groupes');
 
         // Affectations d'un enseignant et volume horaire maximum
         Route::get('enseignants/{enseignant}/affectations', [AffectationController::class, 'show'])->name('affectations.show');

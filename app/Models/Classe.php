@@ -68,16 +68,6 @@ class Classe extends Model
     }
 
     /**
-     * Une classe contient 0..* groupes.
-     *
-     * @return HasMany<Groupe, $this>
-     */
-    public function groupes(): HasMany
-    {
-        return $this->hasMany(Groupe::class);
-    }
-
-    /**
      * Les affectations de la classe (supprimées avec elle).
      *
      * @return HasMany<Affectation, $this>

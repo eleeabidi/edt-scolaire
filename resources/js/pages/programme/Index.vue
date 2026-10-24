@@ -4,14 +4,15 @@ import { computed, ref } from 'vue';
 import FiltrePastilles from '@/components/FiltrePastilles.vue';
 import InfoBox from '@/components/InfoBox.vue';
 import PageHeader from '@/components/PageHeader.vue';
-import { formatDuree, libelleNiveau } from '@/lib/format';
+import { formatDuree, libelleNiveau, typesSalle } from '@/lib/format';
+import type { TypeSalle } from '@/types';
 
-// Écran 19 — Programme national (consultation seule)
+// Écran 19 — Guide pédagogique (consultation seule)
 type MatiereDuNiveau = {
     nom: string;
     minutes: number;
     autoriseeMidi: boolean;
-    typeSalle: 'normale' | 'sport';
+    typeSalle: TypeSalle;
 };
 
 type Niveau = {
@@ -25,7 +26,7 @@ const props = defineProps<{
 }>();
 
 defineOptions({
-    layout: { titre: 'Programme' },
+    layout: { titre: 'Guide pédagogique' },
 });
 
 const niveauChoisi = ref(1);
@@ -40,10 +41,10 @@ const niveau = computed(() =>
 </script>
 
 <template>
-    <Head title="Programme national" />
+    <Head title="Guide pédagogique" />
 
     <PageHeader
-        titre="Programme national"
+        titre="Guide pédagogique"
         sous-titre="Matières et volumes horaires par niveau, fixés par le décret. Consultation seule."
     />
 
@@ -86,17 +87,9 @@ const niveau = computed(() =>
                     <td class="px-4 py-3.5">
                         <span
                             class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                            :class="
-                                matiere.typeSalle === 'sport'
-                                    ? 'bg-succes/15 text-[#1F8A6B]'
-                                    : 'bg-violet-clair text-primary'
-                            "
+                            :class="typesSalle[matiere.typeSalle].classes"
                         >
-                            {{
-                                matiere.typeSalle === 'sport'
-                                    ? 'Sport'
-                                    : 'Normale'
-                            }}
+                            {{ typesSalle[matiere.typeSalle].libelle }}
                         </span>
                     </td>
                 </tr>
@@ -113,9 +106,8 @@ const niveau = computed(() =>
     </div>
 
     <InfoBox class="mt-6">
-        Le programme est chargé une fois dans l'application à partir de l'annexe
-        n° 1 du décret n° 2019-1085 (modifié par le décret n° 2021-143). «
-        Autorisée à midi » indique si la matière peut être placée de 12 h à 13
-        h.
+        Le guide pédagogique est chargé une fois dans l'application à partir du
+        décret n° 2019-1085 (modifié par le décret n° 2021-143). « Autorisée à
+        midi » indique si la matière peut être placée de 12 h à 13 h.
     </InfoBox>
 </template>

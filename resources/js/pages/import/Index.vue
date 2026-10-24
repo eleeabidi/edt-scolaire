@@ -33,7 +33,7 @@ const types = [
     {
         valeur: 'classes' as TypeImport,
         titre: 'Classes',
-        colonnes: 'Nom, niveau, effectif, cours le samedi (3e année)',
+        colonnes: 'Nom, niveau, effectif, cours le samedi',
         icone: Presentation,
     },
     {
@@ -174,14 +174,16 @@ function importer() {
             reçoivent un mot de passe temporaire par email.
         </template>
         <template v-else-if="form.type === 'classes'">
-            La colonne « cours_samedi » (oui / non) n'est lue que pour la 3e
+            La colonne « cours le samedi » (oui / non) n'est lue que pour la 3e
             année : la 1re et la 2e année n'ont jamais cours le samedi, de la 4e
             à la 6e il y a toujours cours le samedi matin.
         </template>
         <template v-else>
-            Le type d'une salle est « normale » ou « sport ».
+            Le type d'une salle est « cours », « sport » ou « technologie ». Les
+            salles importées sont en service.
         </template>
         La première ligne du fichier contient les titres des colonnes, comme
-        dans le modèle.
+        dans le modèle : un fichier dont les colonnes sont différentes est
+        refusé.
     </InfoBox>
 </template>

@@ -17,9 +17,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { store, update } from '@/routes/salles';
 import type { Salle, TypeSalle } from '@/types';
 
-// Fenêtre F10 — Ajouter / Modifier une salle
+// Fenêtre F9 — Mettre en service une salle / Modifier une salle
 const props = defineProps<{
-    // null = ajout, sinon = modification de cette salle
+    // null = nouvelle salle, sinon = modification de cette salle
     salle: Salle | null;
 }>();
 
@@ -27,7 +27,7 @@ const ouvert = defineModel<boolean>('open', { required: true });
 
 const form = useForm({
     nom: '',
-    type: 'normale' as TypeSalle,
+    type: 'cours' as TypeSalle,
     capacite: '' as number | '',
 });
 
@@ -41,7 +41,7 @@ watch(ouvert, (estOuvert) => {
     form.clearErrors();
     form.defaults({
         nom: props.salle?.nom ?? '',
-        type: props.salle?.type ?? 'normale',
+        type: props.salle?.type ?? 'cours',
         capacite: props.salle?.capacite ?? '',
     });
     form.reset();
@@ -69,11 +69,15 @@ function enregistrer() {
                     {{
                         enModification
                             ? 'Modifier la salle'
-                            : 'Ajouter une salle'
+                            : 'Mettre en service une salle'
                     }}
                 </DialogTitle>
                 <DialogDescription>
-                    La salle est créée dans votre école.
+                    {{
+                        enModification
+                            ? 'Modifiez les informations de la salle.'
+                            : 'La salle est créée dans votre école et elle est en service.'
+                    }}
                 </DialogDescription>
             </DialogHeader>
 
@@ -98,8 +102,9 @@ function enregistrer() {
                             required
                             class="h-12 w-full rounded-md border border-input bg-white px-4 text-[15px] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                         >
-                            <option value="normale">Normale</option>
+                            <option value="cours">Cours</option>
                             <option value="sport">Sport</option>
+                            <option value="technologie">Technologie</option>
                         </select>
                         <InputError :message="form.errors.type" />
                     </div>
@@ -119,8 +124,10 @@ function enregistrer() {
                 </div>
 
                 <p class="text-sm text-muted-foreground">
-                    Une salle est soit normale, soit de sport. L'éducation
-                    physique sera placée dans une salle de sport.
+                    Une salle est une salle de cours, de sport ou de
+                    technologie. L'éducation physique est placée dans une salle
+                    de sport et l'éducation technologique dans une salle de
+                    technologie.
                 </p>
 
                 <DialogFooter class="gap-3">
@@ -133,7 +140,9 @@ function enregistrer() {
                     </Button>
                     <Button type="submit" :disabled="form.processing">
                         <Spinner v-if="form.processing" />
-                        {{ enModification ? 'Enregistrer' : 'Ajouter' }}
+                        {{
+                            enModification ? 'Enregistrer' : 'Mettre en service'
+                        }}
                     </Button>
                 </DialogFooter>
             </form>

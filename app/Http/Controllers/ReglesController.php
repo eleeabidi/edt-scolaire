@@ -10,7 +10,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * T11.6 — Consultation des règles nationales et des créneaux, générales ou par niveau (écran 20).
+ * T11.6 — Consultation des règles de gestion des emplois du temps et des créneaux, générales ou par niveau (écran 20).
  */
 class ReglesController extends Controller
 {
@@ -42,6 +42,8 @@ class ReglesController extends Controller
                     ->pluck('description')
                     ->values(),
                 'totalMinutes' => (int) $regles->firstWhere('type', 'total_hebdomadaire')?->valeur,
+                // 4a : sans règle propre (hors total par semaine), les règles générales s'appliquent
+                'reglesPropres' => $regles->contains(fn (Contrainte $r) => $r->niveau === $niveau && $r->type !== 'total_hebdomadaire'),
                 'coursSamedi' => $samedi->valeur ?? 'non', // oui, non ou selon_classe
             ];
         });

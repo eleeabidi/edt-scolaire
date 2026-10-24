@@ -9,7 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * T09.4 — Ajouter / Modifier une salle : nom, type et capacité obligatoires.
+ * T09.4 — Mettre en service / Modifier une salle : nom, type et capacité obligatoires.
  */
 class SalleRequest extends FormRequest
 {
