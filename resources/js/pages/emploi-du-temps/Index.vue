@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { CalendarDays, Check, TriangleAlert } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
@@ -17,7 +17,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { formatDuree } from '@/lib/format';
-import { generer, index } from '@/routes/emploi';
+import { conflits, generer, index } from '@/routes/emploi';
 import type { LigneGrille, SeanceGrille, VueGrille } from '@/types';
 
 // Rubrique « Emploi du temps » (directeur) : générer (US13) et consulter la grille (US15)
@@ -43,6 +43,8 @@ const props = defineProps<{
     choix?: number;
     seances?: SeanceGrille[];
     totalMinutes?: number;
+    nbConflits?: number;
+    surlignee?: number | null;
 }>();
 
 defineOptions({
@@ -149,6 +151,11 @@ const selectClasses =
     <Head title="Emploi du temps" />
 
     <PageHeader titre="Emploi du temps" :sous-titre="sousTitre">
+        <Button v-if="emploi" variant="outline" as-child>
+            <Link :href="conflits(emploi.id)">
+                Conflits ({{ nbConflits ?? 0 }})
+            </Link>
+        </Button>
         <Button
             v-if="emploi && emploi.statut === 'brouillon'"
             variant="outline"
@@ -319,6 +326,7 @@ const selectClasses =
             :cases="cases ?? []"
             :seances="seances ?? []"
             :vue="par"
+            :surlignee="surlignee"
         />
     </template>
 

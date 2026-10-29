@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Enums\StatutCompte;
 use App\Enums\StatutEmploi;
 use App\Exceptions\GenerationImpossible;
+use App\Models\EmploiDuTemps;
 use App\Models\User;
 use App\Services\GenerateurEmploiDuTemps;
 use App\Services\GrilleEmploiDuTemps;
+use App\Support\CreneauHoraire;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -76,6 +78,21 @@ class EmploiDuTempsController extends Controller
             'choix' => $id,
             'seances' => $seances,
             'totalMinutes' => GrilleEmploiDuTemps::totalMinutes($seances),
+            'nbConflits' => count($emploi->detecterConflits()),
+            'surlignee' => $request->integer('seance') ?: null, // « Voir dans la grille » depuis la page des conflits
+        ]);
+    }
+
+    /**
+     * US14 — Conflits de l'emploi du temps : cause et solution proposée (T14.2, T14.3).
+     */
+    public function conflits(Request $request, EmploiDuTemps $emploi): Response
+    {
+        abort_unless($emploi->ecole_id === $request->user()->ecole_id, 403);
+
+        return Inertia::render('emploi-du-temps/Conflits', [
+            'annee' => $emploi->annee_scolaire,
+            'conflits' => $emploi->detecterConflits(),
         ]);
     }
 
@@ -155,8 +172,6 @@ class EmploiDuTempsController extends Controller
      */
     public static function minutesDecret(string $debut, string $fin): int
     {
-        $minutes = fn (string $h) => (int) substr($h, 0, 2) * 60 + (int) substr($h, 3, 2);
-
-        return (int) round(($minutes($fin) - $minutes($debut)) / 10) * 10;
+        return CreneauHoraire::minutesDecret($debut, $fin);
     }
 }

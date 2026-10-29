@@ -71,6 +71,7 @@ Route::middleware(['auth'])->group(function () {
         // Sprint 3 : emploi du temps de l'école (génération)
         Route::get('emploi-du-temps', [EmploiDuTempsController::class, 'index'])->name('emploi.index');
         Route::post('emploi-du-temps/generer', [EmploiDuTempsController::class, 'generer'])->name('emploi.generer');
+        Route::get('emploi-du-temps/{emploi}/conflits', [EmploiDuTempsController::class, 'conflits'])->name('emploi.conflits');
     });
 
     // Gérer les directeurs (Admin)

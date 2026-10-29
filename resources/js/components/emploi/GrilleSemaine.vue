@@ -10,6 +10,7 @@ const props = defineProps<{
     cases: string[]; // cases qui existent (« jour-HH:MM ») ; les autres sont grisées
     seances: SeanceGrille[];
     vue: VueGrille; // classe, enseignant ou salle : ce qu'on n'affiche pas sur les séances
+    surlignee?: number | null; // séance mise en évidence (« Voir dans la grille »)
 }>();
 
 const jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
@@ -104,10 +105,13 @@ const legende = computed(() => [
                                     >
                                         <div
                                             class="rounded-lg px-2.5 py-2 text-xs leading-snug"
-                                            :class="
+                                            :class="[
                                                 typesSalle[seance.typeSalle]
-                                                    .classes
-                                            "
+                                                    .classes,
+                                                seance.id === surlignee
+                                                    ? 'ring-2 ring-erreur ring-offset-1'
+                                                    : '',
+                                            ]"
                                         >
                                             <p
                                                 class="font-bold text-foreground"

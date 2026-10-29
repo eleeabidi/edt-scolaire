@@ -14,6 +14,7 @@ use App\Models\Horaire;
 use App\Models\NiveauMatiere;
 use App\Models\Salle;
 use App\Models\User;
+use App\Support\CreneauHoraire;
 use App\Support\Duree;
 use Generator;
 use Illuminate\Support\Collection;
@@ -196,7 +197,7 @@ class GenerateurEmploiDuTemps
                 'debut' => $debut,
                 'fin' => $fin,
                 // Les matières d'un créneau de 2 h se partagent en heures : 8 h → 9 h → 9 h 55, 10 h 05 → 11 h → 12 h
-                'milieu' => $midiCreneau ? $debut + 30 : intdiv($debut, 60) * 60 + 60,
+                'milieu' => CreneauHoraire::milieu($debut, $midiCreneau),
                 'cle' => $horaire->jour->value.'-'.substr($horaire->heure_debut, 0, 5),
                 'midi' => $midiCreneau,
                 'avantMidi' => $fin === $this->midiDebut,
@@ -431,11 +432,11 @@ class GenerateurEmploiDuTemps
     }
 
     /**
-     * Règles d'organisation du niveau (table contraintes).
+     * Règles d'organisation du niveau (table contraintes). Utilisé aussi par le planning (déplacements).
      *
      * @return Motif
      */
-    private function motif(Classe $classe): array
+    public function motif(Classe $classe): array
     {
         $regles = Contrainte::pourNiveau($classe->niveau)->keyBy('type');
         $organisation = $regles->get('organisation_semaine')?->valeur;
@@ -1159,13 +1160,7 @@ class GenerateurEmploiDuTemps
      */
     private function heureReelle(array $creneau, int $position): int
     {
-        if ($creneau['midi']) {
-            return $creneau['debut'] + $position;
-        }
-
-        return $position <= 60
-            ? $creneau['debut'] + (int) round($position * ($creneau['milieu'] - $creneau['debut']) / 60)
-            : $creneau['milieu'] + (int) round(($position - 60) * ($creneau['fin'] - $creneau['milieu']) / 60);
+        return CreneauHoraire::heureReelle($creneau['debut'], $creneau['fin'], $creneau['midi'], $position);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -1226,14 +1221,12 @@ class GenerateurEmploiDuTemps
 
     private function minutes(string $heure): int
     {
-        [$h, $m] = array_map('intval', explode(':', $heure));
-
-        return $h * 60 + $m;
+        return CreneauHoraire::minutes($heure);
     }
 
     private function heure(int $minutes): string
     {
-        return sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
+        return CreneauHoraire::heure($minutes);
     }
 
     /**
@@ -1241,8 +1234,6 @@ class GenerateurEmploiDuTemps
      */
     private function heureLisible(int $minutes): string
     {
-        $reste = $minutes % 60;
-
-        return intdiv($minutes, 60).' h'.($reste === 0 ? '' : sprintf(' %02d', $reste));
+        return CreneauHoraire::lisible($minutes);
     }
 }
