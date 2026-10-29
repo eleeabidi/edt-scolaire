@@ -6,6 +6,7 @@ use App\Http\Controllers\ClasseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirecteurController;
 use App\Http\Controllers\DisponibiliteController;
+use App\Http\Controllers\EmploiDuTempsController;
 use App\Http\Controllers\EnseignantController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\ProgrammeController;
@@ -66,6 +67,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('import/modele/{type}', [ImportController::class, 'modele'])->name('import.modele');
         Route::post('import', [ImportController::class, 'store'])->name('import.store');
         Route::get('import/rapport', [ImportController::class, 'rapport'])->name('import.rapport');
+
+        // Sprint 3 : emploi du temps de l'école (génération)
+        Route::get('emploi-du-temps', [EmploiDuTempsController::class, 'index'])->name('emploi.index');
+        Route::post('emploi-du-temps/generer', [EmploiDuTempsController::class, 'generer'])->name('emploi.generer');
     });
 
     // Gérer les directeurs (Admin)

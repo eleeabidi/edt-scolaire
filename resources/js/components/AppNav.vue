@@ -3,6 +3,7 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import {
     BriefcaseBusiness,
     CalendarDays,
+    Clock,
     DoorOpen,
     House,
     LibraryBig,
@@ -20,6 +21,7 @@ import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { dashboard, home, logout } from '@/routes';
 import { index as classes } from '@/routes/classes';
 import { index as directeurs } from '@/routes/directeurs';
+import { index as emploiDuTemps } from '@/routes/emploi';
 import { index as disponibilites } from '@/routes/disponibilites';
 import { index as enseignants } from '@/routes/enseignants';
 import { index as importer } from '@/routes/import';
@@ -87,6 +89,11 @@ const liens = computed<Lien[]>(() => {
                 icone: SlidersHorizontal,
             },
             { titre: 'Importer', href: importer(), icone: Upload },
+            {
+                titre: 'Emploi du temps',
+                href: emploiDuTemps(),
+                icone: Clock,
+            },
         );
     }
 
