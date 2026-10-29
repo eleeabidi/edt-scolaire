@@ -107,9 +107,8 @@ class GenerationTest extends TestCase
             ->get(route('emploi.index', ['annee' => '2026-2027']))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('emploi.statut', 'brouillon')
-                ->where('emploi.classes.0.nom', '1re année A')
-                ->where('emploi.classes.0.minutes', 1200)
-                ->where('emploi.classes.7.minutes', 1680));
+                ->where('par', 'classe')
+                ->where('totalMinutes', 1200)); // 1re année A : 20 h
     }
 
     public function test_incomplete_data_shows_the_causes_and_generates_nothing()

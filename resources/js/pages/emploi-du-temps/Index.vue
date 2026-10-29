@@ -3,6 +3,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { CalendarDays, Check, TriangleAlert } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
+import GrilleSemaine from '@/components/emploi/GrilleSemaine.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,22 +18,31 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { formatDuree } from '@/lib/format';
 import { generer, index } from '@/routes/emploi';
+import type { LigneGrille, SeanceGrille, VueGrille } from '@/types';
 
-// Rubrique « Emploi du temps » (directeur) : choisir l'année scolaire et générer (US13)
+// Rubrique « Emploi du temps » (directeur) : générer (US13) et consulter la grille (US15)
 type Emploi = {
     id: number;
     annee: string;
     statut: 'brouillon' | 'publie';
     statutLibelle: string;
-    seances: number;
-    classes: { nom: string; minutes: number; attendues: number }[];
 };
+
+type Option = { id: number; nom: string };
 
 const props = defineProps<{
     ecoleNom: string;
     annees: string[];
     annee: string;
     emploi: Emploi | null;
+    // Grille (seulement si l'emploi du temps existe)
+    lignes?: LigneGrille[];
+    cases?: string[];
+    options?: Record<VueGrille, Option[]>;
+    par?: VueGrille;
+    choix?: number;
+    seances?: SeanceGrille[];
+    totalMinutes?: number;
 }>();
 
 defineOptions({
@@ -49,6 +59,40 @@ function changerAnnee() {
         { preserveScroll: true },
     );
 }
+
+// --- Afficher par classe, enseignant ou salle (T15.3) ---
+const vues: { valeur: VueGrille; libelle: string }[] = [
+    { valeur: 'classe', libelle: 'Classe' },
+    { valeur: 'enseignant', libelle: 'Enseignant' },
+    { valeur: 'salle', libelle: 'Salle' },
+];
+
+const par = ref<VueGrille>(props.par ?? 'classe');
+const choix = ref<number>(props.choix ?? 0);
+
+function afficher() {
+    router.get(
+        index.url(),
+        { annee: props.annee, par: par.value, id: choix.value },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only: ['par', 'choix', 'seances', 'totalMinutes'],
+        },
+    );
+}
+
+function changerVue(vue: VueGrille) {
+    par.value = vue;
+    choix.value = props.options?.[vue][0]?.id ?? 0;
+    afficher();
+}
+
+const nomChoisi = computed(
+    () =>
+        props.options?.[par.value].find((o) => o.id === choix.value)?.nom ?? '',
+);
 
 const sousTitre = computed(() =>
     props.emploi
@@ -180,23 +224,68 @@ const selectClasses =
         </div>
     </section>
 
-    <!-- Emploi du temps de l'année : statut et heures placées par classe -->
+    <!-- Emploi du temps de l'année : grille de la semaine (US15) -->
     <template v-else>
         <div
-            class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+            class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
         >
-            <div class="grid gap-2">
-                <Label for="annee">Année scolaire</Label>
-                <select
-                    id="annee"
-                    v-model="anneeChoisie"
-                    :class="selectClasses"
-                    @change="changerAnnee"
-                >
-                    <option v-for="a in annees" :key="a" :value="a">
-                        {{ a }}
-                    </option>
-                </select>
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
+                <div class="grid gap-2">
+                    <span class="text-sm font-medium">Afficher par</span>
+                    <div
+                        class="flex h-12 rounded-md border bg-white p-1"
+                        role="group"
+                        aria-label="Afficher par"
+                    >
+                        <button
+                            v-for="vue in vues"
+                            :key="vue.valeur"
+                            type="button"
+                            class="rounded px-4 text-sm font-semibold transition-colors"
+                            :class="
+                                par === vue.valeur
+                                    ? 'bg-primary text-white'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            "
+                            :aria-pressed="par === vue.valeur"
+                            @click="changerVue(vue.valeur)"
+                        >
+                            {{ vue.libelle }}
+                        </button>
+                    </div>
+                </div>
+                <div class="grid gap-2">
+                    <Label for="choix">{{
+                        vues.find((v) => v.valeur === par)?.libelle
+                    }}</Label>
+                    <select
+                        id="choix"
+                        v-model="choix"
+                        :class="selectClasses"
+                        @change="afficher"
+                    >
+                        <option
+                            v-for="o in options?.[par] ?? []"
+                            :key="o.id"
+                            :value="o.id"
+                        >
+                            {{ o.nom }}
+                        </option>
+                    </select>
+                </div>
+                <div class="grid gap-2">
+                    <Label for="annee">Année scolaire</Label>
+                    <select
+                        id="annee"
+                        v-model="anneeChoisie"
+                        :class="selectClasses"
+                        @change="changerAnnee"
+                    >
+                        <option v-for="a in annees" :key="a" :value="a">
+                            {{ a }}
+                        </option>
+                    </select>
+                </div>
             </div>
             <div class="flex gap-2">
                 <span
@@ -212,36 +301,25 @@ const selectClasses =
                 <span
                     class="rounded-full bg-violet-clair px-3 py-1 text-xs font-semibold text-primary"
                 >
-                    {{ emploi.seances }} séances
+                    {{ formatDuree(totalMinutes ?? 0) }} par semaine
                 </span>
             </div>
         </div>
 
-        <div class="overflow-x-auto rounded-xl border bg-white">
-            <table class="w-full text-sm">
-                <thead class="bg-fond text-left text-muted-foreground">
-                    <tr>
-                        <th class="px-6 py-4 font-medium">Classe</th>
-                        <th class="px-4 py-4 font-medium">Heures placées</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="classe in emploi.classes"
-                        :key="classe.nom"
-                        class="border-t"
-                    >
-                        <td class="px-6 py-3.5 text-[15px] font-semibold">
-                            {{ classe.nom }}
-                        </td>
-                        <td class="px-4 py-3.5">
-                            {{ formatDuree(classe.minutes) }} sur
-                            {{ formatDuree(classe.attendues) }} par semaine
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <!-- 4a : aucune séance pour ce choix -->
+        <p
+            v-if="(seances ?? []).length === 0"
+            class="mb-4 rounded-xl bg-violet-clair px-4 py-3 text-sm"
+        >
+            {{ nomChoisi }} n'a aucune séance dans cet emploi du temps.
+        </p>
+
+        <GrilleSemaine
+            :lignes="lignes ?? []"
+            :cases="cases ?? []"
+            :seances="seances ?? []"
+            :vue="par"
+        />
     </template>
 
     <!-- 3a : remplacer le brouillon -->

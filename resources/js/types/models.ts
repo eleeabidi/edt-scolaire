@@ -69,3 +69,22 @@ export type Pagination<T> = {
     prev_page_url: string | null;
     next_page_url: string | null;
 };
+
+// Sprint 3 : grille hebdomadaire de l'emploi du temps
+export type VueGrille = 'classe' | 'enseignant' | 'salle';
+
+export type LigneGrille = { debut: string; fin: string; midi: boolean };
+
+export type SeanceGrille = {
+    id: number;
+    case: string; // « jour-HH:MM » du créneau
+    jour: number;
+    debut: string;
+    fin: string;
+    classe: string;
+    enseignant: string;
+    salle: string;
+    typeSalle: TypeSalle;
+    minutes: number;
+    matieres: { nom: string; debut: string; fin: string }[];
+};

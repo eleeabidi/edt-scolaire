@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\StatutCompte;
 use App\Enums\StatutEmploi;
 use App\Exceptions\GenerationImpossible;
-use App\Models\EmploiDuTemps;
-use App\Models\NiveauMatiere;
-use App\Models\Seance;
+use App\Models\User;
 use App\Services\GenerateurEmploiDuTemps;
+use App\Services\GrilleEmploiDuTemps;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -19,11 +19,13 @@ use Inertia\Response;
 
 /**
  * US13 — Emploi du temps de l'école du directeur : choix de l'année scolaire et génération (T13.5, T13.8).
+ * US15 — Grille hebdomadaire filtrée par classe, par enseignant ou par salle (T15.1 à T15.3).
  */
 class EmploiDuTempsController extends Controller
 {
     /**
-     * Rubrique « Emploi du temps » : l'emploi du temps de l'année choisie, ou la proposition de le générer.
+     * Rubrique « Emploi du temps » : la grille de l'année choisie (?annee=), filtrée par classe, enseignant
+     * ou salle (?par=classe&id=3), ou la proposition de générer l'emploi du temps.
      */
     public function index(Request $request): Response
     {
@@ -32,12 +34,48 @@ class EmploiDuTempsController extends Controller
         $annee = in_array($request->query('annee'), $annees, true) ? (string) $request->query('annee') : $annees[0];
 
         $emploi = $ecole->emploisDuTemps()->where('annee_scolaire', $annee)->first();
-
-        return Inertia::render('emploi-du-temps/Index', [
+        $proprietes = [
             'ecoleNom' => $ecole->nom,
             'annees' => $annees,
             'annee' => $annee,
-            'emploi' => $emploi ? $this->resume($emploi) : null,
+            'emploi' => $emploi ? [
+                'id' => $emploi->id,
+                'annee' => $emploi->annee_scolaire,
+                'statut' => $emploi->statut->value,
+                'statutLibelle' => $emploi->statut->label(),
+            ] : null,
+        ];
+
+        if ($emploi === null) {
+            return Inertia::render('emploi-du-temps/Index', $proprietes);
+        }
+
+        // Ce qu'on peut afficher : les classes, les enseignants (actifs ou planifiés) et les salles de l'école
+        $planifies = $emploi->seances()->distinct()->pluck('enseignant_id');
+        $options = [
+            'classe' => $ecole->classes()->orderBy('niveau')->orderBy('nom')->get(['id', 'nom'])
+                ->map(fn ($c) => ['id' => $c->id, 'nom' => $c->nom])->all(),
+            'enseignant' => $ecole->enseignants()
+                ->where(fn ($q) => $q->where('statut', StatutCompte::Actif)->orWhereIn('id', $planifies))
+                ->orderBy('nom')->orderBy('prenom')->get()
+                ->map(fn (User $u) => ['id' => $u->id, 'nom' => $u->name])->all(),
+            'salle' => $ecole->salles()->orderBy('nom')->get(['id', 'nom'])
+                ->map(fn ($s) => ['id' => $s->id, 'nom' => $s->nom])->all(),
+        ];
+
+        $par = array_key_exists((string) $request->query('par'), GrilleEmploiDuTemps::FILTRES) ? (string) $request->query('par') : 'classe';
+        $ids = array_column($options[$par], 'id');
+        $id = in_array($request->integer('id'), $ids, true) ? $request->integer('id') : ($ids[0] ?? 0);
+        $seances = GrilleEmploiDuTemps::seances($emploi, $par, $id);
+
+        return Inertia::render('emploi-du-temps/Index', [
+            ...$proprietes,
+            ...GrilleEmploiDuTemps::structure(),
+            'options' => $options,
+            'par' => $par,
+            'choix' => $id,
+            'seances' => $seances,
+            'totalMinutes' => GrilleEmploiDuTemps::totalMinutes($seances),
         ]);
     }
 
@@ -109,34 +147,6 @@ class EmploiDuTempsController extends Controller
         $debut = $date->month >= 9 ? $date->year : $date->year - 1;
 
         return [$debut.'-'.($debut + 1), ($debut + 1).'-'.($debut + 2)];
-    }
-
-    /**
-     * Statut de l'emploi du temps et heures placées pour chaque classe (la grille arrive à l'étape suivante).
-     *
-     * @return array<string, mixed>
-     */
-    private function resume(EmploiDuTemps $emploi): array
-    {
-        $seances = $emploi->seances()->with(['classe', 'matieres'])->get();
-        $attendues = NiveauMatiere::query()->selectRaw('niveau, SUM(minutes_par_semaine) as total')->groupBy('niveau')->pluck('total', 'niveau');
-
-        $classes = $emploi->ecole->classes()->orderBy('niveau')->orderBy('nom')->get()->map(fn ($classe) => [
-            'nom' => $classe->nom,
-            'minutes' => (int) $seances->where('classe_id', $classe->id)->sum(
-                fn (Seance $s) => $s->matieres->sum(fn ($m) => self::minutesDecret($m->heure_debut, $m->heure_fin)),
-            ),
-            'attendues' => (int) ($attendues[$classe->niveau] ?? 0),
-        ]);
-
-        return [
-            'id' => $emploi->id,
-            'annee' => $emploi->annee_scolaire,
-            'statut' => $emploi->statut->value,
-            'statutLibelle' => $emploi->statut->label(),
-            'seances' => $seances->count(),
-            'classes' => $classes,
-        ];
     }
 
     /**
