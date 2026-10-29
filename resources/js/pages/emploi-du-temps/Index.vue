@@ -18,7 +18,7 @@ import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { formatDuree, formatHeure } from '@/lib/format';
-import { conflits, generer, index } from '@/routes/emploi';
+import { conflits, generer, index, publier } from '@/routes/emploi';
 import { deplacer, salle as changerSalle } from '@/routes/seances';
 import type { LigneGrille, SeanceGrille, VueGrille } from '@/types';
 
@@ -167,10 +167,40 @@ const descriptionSeance = computed(() => {
         : '';
 });
 
+// --- Publier (US17) ---
+const publicationOuverte = ref(false);
+const publication = ref(false);
+const refusPublication = ref<string | null>(null);
+
+function lancerPublication() {
+    if (!props.emploi) {
+        return;
+    }
+
+    router.post(
+        publier.url(props.emploi.id),
+        {},
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onStart: () => (publication.value = true),
+            onFinish: () => {
+                publication.value = false;
+                publicationOuverte.value = false;
+            },
+            // 4a : il reste des conflits → publication refusée
+            onError: (erreurs) =>
+                (refusPublication.value = erreurs.publication ?? null),
+        },
+    );
+}
+
 const sousTitre = computed(() =>
-    props.emploi
-        ? `${props.ecoleNom} · année scolaire ${props.emploi.annee}. Glissez une séance pour la déplacer, cliquez dessus pour changer la salle.`
-        : `${props.ecoleNom} · générez l'emploi du temps de toutes les classes de l'école.`,
+    props.emploi?.statut === 'publie'
+        ? `${props.ecoleNom} · année scolaire ${props.emploi.annee}. L'emploi du temps est publié : chaque enseignant voit le sien.`
+        : props.emploi
+          ? `${props.ecoleNom} · année scolaire ${props.emploi.annee}. Glissez une séance pour la déplacer, cliquez dessus pour changer la salle.`
+          : `${props.ecoleNom} · générez l'emploi du temps de toutes les classes de l'école.`,
 );
 
 // --- Générer ---
@@ -235,6 +265,12 @@ const selectClasses =
         >
             <Spinner v-if="generation" />
             Générer
+        </Button>
+        <Button
+            v-if="emploi && emploi.statut === 'brouillon'"
+            @click="publicationOuverte = true"
+        >
+            Publier
         </Button>
     </PageHeader>
 
@@ -504,6 +540,46 @@ const selectClasses =
                     </Button>
                 </DialogFooter>
             </form>
+        </DialogContent>
+    </Dialog>
+
+    <!-- Publier l'emploi du temps ? -->
+    <ConfirmationDialog
+        v-model:open="publicationOuverte"
+        titre="Publier l'emploi du temps ?"
+        :message="`L'emploi du temps ${emploi?.annee} deviendra visible pour les enseignants de l'école. Chaque enseignant recevra une notification.`"
+        libelle-confirmer="Publier"
+        icone="valider"
+        :danger="false"
+        :en-cours="publication"
+        @confirmer="lancerPublication"
+    />
+
+    <!-- 4a : publication impossible (conflits) -->
+    <Dialog
+        :open="refusPublication !== null"
+        @update:open="(ouvert) => !ouvert && (refusPublication = null)"
+    >
+        <DialogContent>
+            <div
+                class="flex size-14 items-center justify-center rounded-2xl bg-erreur/15 text-erreur"
+            >
+                <TriangleAlert class="size-5" />
+            </div>
+            <DialogHeader>
+                <DialogTitle>Publication impossible</DialogTitle>
+                <DialogDescription class="leading-relaxed">
+                    {{ refusPublication }}
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter class="gap-3">
+                <Button variant="outline" @click="refusPublication = null">
+                    Fermer
+                </Button>
+                <Button v-if="emploi" as-child>
+                    <Link :href="conflits(emploi.id)">Voir les conflits</Link>
+                </Button>
+            </DialogFooter>
         </DialogContent>
     </Dialog>
 </template>

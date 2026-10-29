@@ -9,6 +9,7 @@ use App\Http\Controllers\DisponibiliteController;
 use App\Http\Controllers\EmploiDuTempsController;
 use App\Http\Controllers\EnseignantController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\MonEmploiDuTempsController;
 use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\ReglesController;
 use App\Http\Controllers\SalleController;
@@ -73,11 +74,17 @@ Route::middleware(['auth'])->group(function () {
         Route::get('emploi-du-temps', [EmploiDuTempsController::class, 'index'])->name('emploi.index');
         Route::post('emploi-du-temps/generer', [EmploiDuTempsController::class, 'generer'])->name('emploi.generer');
         Route::get('emploi-du-temps/{emploi}/conflits', [EmploiDuTempsController::class, 'conflits'])->name('emploi.conflits');
+        Route::post('emploi-du-temps/{emploi}/publier', [EmploiDuTempsController::class, 'publier'])->name('emploi.publier');
 
         // Modifier une séance : la déplacer (glisser-déposer) ou changer sa salle
         Route::patch('seances/{seance}/deplacer', [SeanceController::class, 'deplacer'])->name('seances.deplacer');
         Route::patch('seances/{seance}/salle', [SeanceController::class, 'changerSalle'])->name('seances.salle');
     });
+
+    // Sprint 3 : l'enseignant consulte son emploi du temps (seulement s'il est publié)
+    Route::get('mon-emploi-du-temps', MonEmploiDuTempsController::class)
+        ->middleware('role:enseignant')
+        ->name('mon-emploi.index');
 
     // Gérer les directeurs (Admin)
     Route::middleware('role:admin')->group(function () {

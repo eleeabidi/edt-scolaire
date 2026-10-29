@@ -50,6 +50,14 @@ class EmploiDuTemps extends Model
     }
 
     /**
+     * T17.2 — Passe l'emploi du temps du statut brouillon au statut publié (visible des enseignants).
+     */
+    public function publier(): void
+    {
+        $this->update(['statut' => StatutEmploi::Publie]);
+    }
+
+    /**
      * T14.1 — Les conflits de l'emploi du temps, avec leur cause et une solution proposée.
      *
      * @return list<array<string, mixed>>

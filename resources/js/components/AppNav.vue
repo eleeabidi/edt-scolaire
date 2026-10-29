@@ -25,6 +25,7 @@ import { index as emploiDuTemps } from '@/routes/emploi';
 import { index as disponibilites } from '@/routes/disponibilites';
 import { index as enseignants } from '@/routes/enseignants';
 import { index as importer } from '@/routes/import';
+import { index as monEmploiDuTemps } from '@/routes/mon-emploi';
 import { index as programme } from '@/routes/programme';
 import { edit as profil } from '@/routes/profile';
 import { index as regles } from '@/routes/regles';
@@ -95,6 +96,15 @@ const liens = computed<Lien[]>(() => {
                 icone: Clock,
             },
         );
+    }
+
+    // Sprint 3 : l'enseignant consulte son emploi du temps publié
+    if (role === 'enseignant') {
+        items.push({
+            titre: 'Mon emploi du temps',
+            href: monEmploiDuTemps(),
+            icone: Clock,
+        });
     }
 
     items.push({ titre: 'Mon profil', href: profil(), icone: UserRound });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Power, Trash2, TriangleAlert } from '@lucide/vue';
+import { Check, Power, Trash2, TriangleAlert } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -21,7 +21,7 @@ withDefaults(
         libelleConfirmer?: string;
         libelleAnnuler?: string;
         enCours?: boolean;
-        icone?: 'supprimer' | 'alerte' | 'service';
+        icone?: 'supprimer' | 'alerte' | 'service' | 'valider';
         danger?: boolean;
     }>(),
     {
@@ -51,6 +51,7 @@ const emit = defineEmits<{ confirmer: [] }>();
             >
                 <TriangleAlert v-if="icone === 'alerte'" class="size-5" />
                 <Power v-else-if="icone === 'service'" class="size-5" />
+                <Check v-else-if="icone === 'valider'" class="size-5" />
                 <Trash2 v-else class="size-5" />
             </div>
             <DialogHeader>

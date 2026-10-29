@@ -5,12 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Horaire;
 use App\Models\Salle;
 use App\Models\Seance;
+use App\Notifications\SeanceModifieeNotification;
 use App\Services\PlanningEmploiDuTemps;
+use App\Support\CreneauHoraire;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Throwable;
 
 /**
  * US16 — Modifier une séance : la déplacer sur un autre créneau (glisser-déposer) ou changer sa salle.
@@ -35,9 +38,11 @@ class SeanceController extends Controller
             throw ValidationException::withMessages(['deplacement' => $verification['cause'].' La séance reste à sa place.']);
         }
 
+        $avant = $this->quand($seance);
         $seance->deplacer($horaire, $verification['decalage']);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'La séance a été déplacée.']);
+        // 3a : emploi du temps publié → l'enseignant de la séance est prévenu
+        $this->prevenir($seance, 'La séance a été déplacée.', "Votre séance de {$this->matieres($seance)} en {$seance->classe->nom} a été déplacée du {$avant} au {$this->quand($seance)}.");
 
         return back();
     }
@@ -64,11 +69,56 @@ class SeanceController extends Controller
             }
 
             $seance->changerSalle($salle);
+            $this->prevenir($seance, 'La salle de la séance a été changée.', "Votre séance de {$this->matieres($seance)} en {$seance->classe->nom} du {$this->quand($seance)} a lieu désormais dans la salle {$salle->nom}.");
+
+            return back();
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'La salle de la séance a été changée.']);
 
         return back();
+    }
+
+    /**
+     * Message de succès ; si l'emploi du temps est publié, email à l'enseignant de la séance (T17.4).
+     */
+    private function prevenir(Seance $seance, string $succes, string $modification): void
+    {
+        if (! $seance->emploiDuTemps->estPublie()) {
+            Inertia::flash('toast', ['type' => 'success', 'message' => $succes]);
+
+            return;
+        }
+
+        $enseignant = $seance->enseignant()->firstOrFail();
+
+        try {
+            $enseignant->notify(new SeanceModifieeNotification($modification));
+            Inertia::flash('toast', ['type' => 'success', 'message' => "{$succes} {$enseignant->name} a été prévenu(e) par email."]);
+        } catch (Throwable $e) {
+            report($e);
+            Inertia::flash('toast', ['type' => 'warning', 'message' => "{$succes} Mais l'email n'a pas pu être envoyé à {$enseignant->name}."]);
+        }
+    }
+
+    /**
+     * « lundi 8 h – 9 h 55 »
+     */
+    private function quand(Seance $seance): string
+    {
+        $seance->load(['horaire', 'matieres']);
+
+        return mb_strtolower($seance->horaire()->firstOrFail()->jour->label()).' '
+            .CreneauHoraire::lisible(CreneauHoraire::minutes((string) $seance->matieres->min('heure_debut'))).' – '
+            .CreneauHoraire::lisible(CreneauHoraire::minutes((string) $seance->matieres->max('heure_fin')));
+    }
+
+    /**
+     * « Français » ou « Mathématiques, Éveil scientifique »
+     */
+    private function matieres(Seance $seance): string
+    {
+        return $seance->matieres()->with('matiere')->orderBy('heure_debut')->get()->map(fn ($m) => $m->matiere->nom)->join(', ');
     }
 
     /**

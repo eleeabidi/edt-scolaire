@@ -8,6 +8,7 @@ use App\Exceptions\GenerationImpossible;
 use App\Models\EmploiDuTemps;
 use App\Models\Salle;
 use App\Models\User;
+use App\Notifications\EmploiDuTempsPublieNotification;
 use App\Services\GenerateurEmploiDuTemps;
 use App\Services\GrilleEmploiDuTemps;
 use App\Services\PlanningEmploiDuTemps;
@@ -20,6 +21,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 /**
  * US13 — Emploi du temps de l'école du directeur : choix de l'année scolaire et génération (T13.5, T13.8).
@@ -84,6 +86,47 @@ class EmploiDuTempsController extends Controller
             'sallesPossibles' => Inertia::optional(fn () => $this->sallesPossibles($emploi, $request->integer('salles_pour'))),
             'surlignee' => $request->integer('seance') ?: null, // « Voir dans la grille » depuis la page des conflits
         ]);
+    }
+
+    /**
+     * US17 — Publier l'emploi du temps (T17.1, T17.2, T17.4) : refusé s'il reste des conflits ;
+     * sinon il devient visible des enseignants, qui reçoivent chacun un email.
+     */
+    public function publier(Request $request, EmploiDuTemps $emploi): RedirectResponse
+    {
+        abort_unless($emploi->ecole_id === $request->user()->ecole_id, 403);
+
+        if ($emploi->estPublie()) {
+            Inertia::flash('toast', ['type' => 'info', 'message' => "L'emploi du temps {$emploi->annee_scolaire} est déjà publié."]);
+
+            return back();
+        }
+
+        // 4a : il reste des conflits → publication refusée
+        $nombre = count($emploi->detecterConflits());
+        if ($nombre > 0) {
+            throw ValidationException::withMessages([
+                'publication' => "L'emploi du temps contient {$nombre} conflit".($nombre > 1 ? 's' : '').'. Corrigez-les avant de le publier.',
+            ]);
+        }
+
+        $emploi->publier();
+
+        $echecs = 0;
+        foreach ($emploi->ecole->enseignants()->where('statut', StatutCompte::Actif)->get() as $enseignant) {
+            try {
+                $enseignant->notify(new EmploiDuTempsPublieNotification($emploi));
+            } catch (Throwable $e) {
+                report($e);
+                $echecs++;
+            }
+        }
+
+        Inertia::flash('toast', $echecs === 0
+            ? ['type' => 'success', 'message' => "L'emploi du temps {$emploi->annee_scolaire} est publié : chaque enseignant a reçu une notification."]
+            : ['type' => 'warning', 'message' => "L'emploi du temps {$emploi->annee_scolaire} est publié, mais {$echecs} email(s) n'ont pas pu être envoyés."]);
+
+        return back();
     }
 
     /**
