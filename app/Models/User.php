@@ -131,4 +131,14 @@ class User extends Authenticatable
     {
         return $this->statut === StatutCompte::Actif;
     }
+
+    /**
+     * Les séances que l'enseignant assure dans les emplois du temps.
+     *
+     * @return HasMany<Seance, $this>
+     */
+    public function seances(): HasMany
+    {
+        return $this->hasMany(Seance::class, 'enseignant_id');
+    }
 }

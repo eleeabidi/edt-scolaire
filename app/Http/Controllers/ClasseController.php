@@ -67,10 +67,20 @@ class ClasseController extends Controller
 
     /**
      * Supprime la classe et ses affectations (suppression en cascade).
+     * T13.9 : refusé si la classe est utilisée dans un emploi du temps.
      */
     public function destroy(Request $request, Classe $classe): RedirectResponse
     {
         $this->verifierEcole($request, $classe);
+
+        $annee = $classe->seances()->join('emplois_du_temps', 'emplois_du_temps.id', '=', 'seances.emploi_du_temps_id')
+            ->value('emplois_du_temps.annee_scolaire');
+
+        if ($annee !== null) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => "Impossible de supprimer la classe {$classe->nom} : elle est utilisée dans l'emploi du temps {$annee}."]);
+
+            return back();
+        }
 
         $classe->delete();
 

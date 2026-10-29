@@ -76,4 +76,14 @@ class Classe extends Model
     {
         return $this->hasMany(Affectation::class);
     }
+
+    /**
+     * Les séances de la classe dans les emplois du temps.
+     *
+     * @return HasMany<Seance, $this>
+     */
+    public function seances(): HasMany
+    {
+        return $this->hasMany(Seance::class);
+    }
 }

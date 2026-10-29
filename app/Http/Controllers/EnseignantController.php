@@ -138,6 +138,16 @@ class EnseignantController extends Controller
     {
         $this->autoriser($request, $enseignant);
 
+        // T13.10 : un enseignant déjà planifié dans un emploi du temps ne peut pas être désactivé
+        $annee = $enseignant->seances()->join('emplois_du_temps', 'emplois_du_temps.id', '=', 'seances.emploi_du_temps_id')
+            ->value('emplois_du_temps.annee_scolaire');
+
+        if ($annee !== null) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => "Impossible de supprimer {$enseignant->name} : cet enseignant assure des séances dans l'emploi du temps {$annee}. Modifiez d'abord l'emploi du temps."]);
+
+            return back();
+        }
+
         $enseignant->update(['statut' => StatutCompte::Desactive]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => "L'enseignant a été supprimé (compte désactivé)."]);

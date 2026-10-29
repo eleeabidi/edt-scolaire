@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -51,5 +52,15 @@ class Salle extends Model
     public function ecole(): BelongsTo
     {
         return $this->belongsTo(Ecole::class);
+    }
+
+    /**
+     * Les séances qui ont lieu dans la salle.
+     *
+     * @return HasMany<Seance, $this>
+     */
+    public function seances(): HasMany
+    {
+        return $this->hasMany(Seance::class);
     }
 }

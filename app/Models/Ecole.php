@@ -61,4 +61,14 @@ class Ecole extends Model
     {
         return $this->hasMany(Classe::class);
     }
+
+    /**
+     * Un emploi du temps par année scolaire.
+     *
+     * @return HasMany<EmploiDuTemps, $this>
+     */
+    public function emploisDuTemps(): HasMany
+    {
+        return $this->hasMany(EmploiDuTemps::class);
+    }
 }
