@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\CreneauHoraire;
 use Database\Factories\SeanceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Séance : une classe, un enseignant et une salle pendant un créneau. Elle se compose
@@ -78,5 +80,39 @@ class Seance extends Model
     public function matieres(): HasMany
     {
         return $this->hasMany(SeanceMatiere::class);
+    }
+
+    /**
+     * Déplace la séance sur un autre créneau (déjà vérifié) : les matières gardent leur durée et leur ordre.
+     * $decalage : 0 = dans la 1re heure du créneau, 60 = dans la 2e heure (séance d'1 h).
+     */
+    public function deplacer(Horaire $horaire, int $decalage = 0): void
+    {
+        $debut = CreneauHoraire::minutes($horaire->heure_debut);
+        $fin = CreneauHoraire::minutes($horaire->heure_fin);
+        $midi = $fin - $debut <= 60;
+        $position = $decalage;
+
+        DB::transaction(function () use ($horaire, $debut, $fin, $midi, &$position) {
+            foreach ($this->matieres()->orderBy('heure_debut')->get() as $ligne) {
+                $minutes = CreneauHoraire::minutesDecret($ligne->heure_debut, $ligne->heure_fin);
+
+                $ligne->update([
+                    'heure_debut' => CreneauHoraire::heure(CreneauHoraire::heureReelle($debut, $fin, $midi, $position)),
+                    'heure_fin' => CreneauHoraire::heure(CreneauHoraire::heureReelle($debut, $fin, $midi, $position + $minutes)),
+                ]);
+                $position += $minutes;
+            }
+
+            $this->update(['horaire_id' => $horaire->id]);
+        });
+    }
+
+    /**
+     * Change la salle de la séance (déjà vérifiée).
+     */
+    public function changerSalle(Salle $salle): void
+    {
+        $this->update(['salle_id' => $salle->id]);
     }
 }

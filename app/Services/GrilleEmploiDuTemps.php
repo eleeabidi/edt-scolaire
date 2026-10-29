@@ -26,13 +26,14 @@ class GrilleEmploiDuTemps
      * Les lignes de la grille (un créneau par ligne) et les cases qui existent (« jour-HH:MM ») ;
      * le samedi après-midi et le samedi de 12 h à 13 h sont grisés (pas de cours).
      *
-     * @return array{lignes: list<array{debut: string, fin: string, midi: bool}>, cases: list<string>}
+     * @return array{lignes: list<array{debut: string, fin: string, midi: bool}>, cases: list<string>, horaires: array<string, int>}
      */
     public static function structure(): array
     {
         $horaires = Horaire::orderBy('jour')->orderBy('heure_debut')->get();
         $lignes = [];
         $cases = [];
+        $ids = [];
 
         foreach ($horaires as $horaire) {
             $debut = substr($horaire->heure_debut, 0, 5);
@@ -42,12 +43,13 @@ class GrilleEmploiDuTemps
 
             if (! ($midi && $horaire->jour === Jour::Samedi)) {
                 $cases[] = $horaire->jour->value.'-'.$debut;
+                $ids[$horaire->jour->value.'-'.$debut] = $horaire->id;
             }
         }
 
         ksort($lignes);
 
-        return ['lignes' => array_values($lignes), 'cases' => $cases];
+        return ['lignes' => array_values($lignes), 'cases' => $cases, 'horaires' => $ids];
     }
 
     /**

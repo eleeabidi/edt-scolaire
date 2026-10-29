@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { CalendarDays, Check, TriangleAlert } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
@@ -14,10 +14,12 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { formatDuree } from '@/lib/format';
+import { formatDuree, formatHeure } from '@/lib/format';
 import { conflits, generer, index } from '@/routes/emploi';
+import { deplacer, salle as changerSalle } from '@/routes/seances';
 import type { LigneGrille, SeanceGrille, VueGrille } from '@/types';
 
 // Rubrique « Emploi du temps » (directeur) : générer (US13) et consulter la grille (US15)
@@ -45,6 +47,8 @@ const props = defineProps<{
     totalMinutes?: number;
     nbConflits?: number;
     surlignee?: number | null;
+    horaires?: Record<string, number>; // « jour-HH:MM » → id du créneau
+    sallesPossibles?: Option[];
 }>();
 
 defineOptions({
@@ -96,9 +100,76 @@ const nomChoisi = computed(
         props.options?.[par.value].find((o) => o.id === choix.value)?.nom ?? '',
 );
 
+// --- Modifier une séance (US16) : glisser-déposer, ou clic pour changer la salle ---
+const jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+const causeRefus = ref<string | null>(null);
+const refusOuvert = ref(false);
+
+function deplacerSeance(seance: SeanceGrille, cle: string) {
+    const horaireId = props.horaires?.[cle];
+
+    if (!horaireId) {
+        return;
+    }
+
+    router.patch(
+        deplacer.url(seance.id),
+        { horaire_id: horaireId },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onError: (erreurs) => {
+                // 2a : conflit → alerte avec la cause, la séance reste à sa place
+                causeRefus.value = erreurs.deplacement ?? null;
+                refusOuvert.value = causeRefus.value !== null;
+            },
+        },
+    );
+}
+
+const seanceChoisie = ref<SeanceGrille | null>(null);
+const salleOuverte = ref(false);
+const formSalle = useForm({ salle_id: 0 });
+
+function choisirSeance(seance: SeanceGrille) {
+    seanceChoisie.value = seance;
+    formSalle.clearErrors();
+    formSalle.salle_id = 0;
+    salleOuverte.value = true;
+
+    // Les salles possibles sont calculées par le serveur pour cette séance
+    router.reload({
+        only: ['sallesPossibles'],
+        data: { salles_pour: seance.id },
+        onSuccess: () => {
+            formSalle.salle_id = props.sallesPossibles?.[0]?.id ?? 0;
+        },
+    });
+}
+
+function enregistrerSalle() {
+    if (!seanceChoisie.value) {
+        return;
+    }
+
+    formSalle.patch(changerSalle.url(seanceChoisie.value.id), {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => (salleOuverte.value = false),
+    });
+}
+
+const descriptionSeance = computed(() => {
+    const s = seanceChoisie.value;
+
+    return s
+        ? `${s.classe} · ${jours[s.jour - 1]} ${formatHeure(s.debut)} – ${formatHeure(s.fin)} · ${s.matieres.map((m) => m.nom).join(', ')} · ${s.enseignant}`
+        : '';
+});
+
 const sousTitre = computed(() =>
     props.emploi
-        ? `${props.ecoleNom} · année scolaire ${props.emploi.annee}.`
+        ? `${props.ecoleNom} · année scolaire ${props.emploi.annee}. Glissez une séance pour la déplacer, cliquez dessus pour changer la salle.`
         : `${props.ecoleNom} · générez l'emploi du temps de toutes les classes de l'école.`,
 );
 
@@ -327,6 +398,9 @@ const selectClasses =
             :seances="seances ?? []"
             :vue="par"
             :surlignee="surlignee"
+            modifiable
+            @deplacer="deplacerSeance"
+            @choisir="choisirSeance"
         />
     </template>
 
@@ -363,6 +437,73 @@ const selectClasses =
             <DialogFooter>
                 <Button @click="impossibleOuvert = false">Compris</Button>
             </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
+    <!-- 2a : déplacement impossible -->
+    <Dialog v-model:open="refusOuvert">
+        <DialogContent>
+            <div
+                class="flex size-14 items-center justify-center rounded-2xl bg-erreur/15 text-erreur"
+            >
+                <TriangleAlert class="size-5" />
+            </div>
+            <DialogHeader>
+                <DialogTitle>Déplacement impossible</DialogTitle>
+                <DialogDescription class="leading-relaxed">
+                    {{ causeRefus }}
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+                <Button @click="refusOuvert = false">Compris</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
+    <!-- 1a : changer la salle de la séance -->
+    <Dialog v-model:open="salleOuverte">
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Changer la salle de la séance</DialogTitle>
+                <DialogDescription>{{ descriptionSeance }}</DialogDescription>
+            </DialogHeader>
+            <form class="grid gap-4" @submit.prevent="enregistrerSalle">
+                <div class="grid gap-2">
+                    <Label for="salle">Salle</Label>
+                    <select
+                        id="salle"
+                        v-model="formSalle.salle_id"
+                        required
+                        class="h-12 w-full rounded-md border border-input bg-white px-4 text-[15px] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    >
+                        <option
+                            v-for="s in sallesPossibles ?? []"
+                            :key="s.id"
+                            :value="s.id"
+                        >
+                            {{ s.nom }}
+                        </option>
+                    </select>
+                    <InputError :message="formSalle.errors.salle_id" />
+                </div>
+                <p class="text-sm text-muted-foreground">
+                    Seules les salles en service, libres sur ce créneau, du bon
+                    type et assez grandes pour la classe sont proposées.
+                </p>
+                <DialogFooter class="gap-3">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="salleOuverte = false"
+                    >
+                        Annuler
+                    </Button>
+                    <Button type="submit" :disabled="formSalle.processing">
+                        <Spinner v-if="formSalle.processing" />
+                        Enregistrer
+                    </Button>
+                </DialogFooter>
+            </form>
         </DialogContent>
     </Dialog>
 </template>

@@ -12,6 +12,7 @@ use App\Http\Controllers\ImportController;
 use App\Http\Controllers\ProgrammeController;
 use App\Http\Controllers\ReglesController;
 use App\Http\Controllers\SalleController;
+use App\Http\Controllers\SeanceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -72,6 +73,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('emploi-du-temps', [EmploiDuTempsController::class, 'index'])->name('emploi.index');
         Route::post('emploi-du-temps/generer', [EmploiDuTempsController::class, 'generer'])->name('emploi.generer');
         Route::get('emploi-du-temps/{emploi}/conflits', [EmploiDuTempsController::class, 'conflits'])->name('emploi.conflits');
+
+        // Modifier une séance : la déplacer (glisser-déposer) ou changer sa salle
+        Route::patch('seances/{seance}/deplacer', [SeanceController::class, 'deplacer'])->name('seances.deplacer');
+        Route::patch('seances/{seance}/salle', [SeanceController::class, 'changerSalle'])->name('seances.salle');
     });
 
     // Gérer les directeurs (Admin)

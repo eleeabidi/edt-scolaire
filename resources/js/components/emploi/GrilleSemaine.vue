@@ -1,17 +1,47 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { formatHeure, typesSalle } from '@/lib/format';
 import type { LigneGrille, SeanceGrille, VueGrille } from '@/types';
 
 // T15.1 — Grille de la semaine : les jours en colonnes, les créneaux en lignes ;
 // chaque case montre les séances du créneau (une, ou deux avec 1 h d'EPS ou de technologie).
+// T16.1 — Si « modifiable » : on fait glisser une séance vers une autre case, ou on clique dessus.
 const props = defineProps<{
     lignes: LigneGrille[];
     cases: string[]; // cases qui existent (« jour-HH:MM ») ; les autres sont grisées
     seances: SeanceGrille[];
     vue: VueGrille; // classe, enseignant ou salle : ce qu'on n'affiche pas sur les séances
     surlignee?: number | null; // séance mise en évidence (« Voir dans la grille »)
+    modifiable?: boolean;
 }>();
+
+const emit = defineEmits<{
+    deplacer: [seance: SeanceGrille, cle: string]; // séance déposée sur la case « jour-HH:MM »
+    choisir: [seance: SeanceGrille]; // clic sur une séance (changer la salle)
+}>();
+
+// --- Glisser-déposer ---
+const glissee = ref<SeanceGrille | null>(null);
+const survol = ref<string | null>(null);
+
+function commencer(seance: SeanceGrille, evenement: DragEvent) {
+    glissee.value = seance;
+    evenement.dataTransfer?.setData('text/plain', String(seance.id));
+}
+
+function terminer() {
+    glissee.value = null;
+    survol.value = null;
+}
+
+function deposer(cle: string) {
+    const seance = glissee.value;
+    terminer();
+
+    if (seance && seance.case !== cle) {
+        emit('deplacer', seance, cle);
+    }
+}
 
 const jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
 
@@ -89,7 +119,22 @@ const legende = computed(() => [
                         >
                             <div
                                 v-if="existe(j + 1, ligne.debut)"
-                                class="grid gap-1.5"
+                                class="grid min-h-12 gap-1.5 rounded-lg transition-colors"
+                                :class="
+                                    survol === `${j + 1}-${ligne.debut}`
+                                        ? 'bg-violet-clair outline-2 outline-primary outline-dashed'
+                                        : ''
+                                "
+                                @dragover.prevent="
+                                    modifiable &&
+                                    glissee &&
+                                    (survol = `${j + 1}-${ligne.debut}`)
+                                "
+                                @dragleave="survol = null"
+                                @drop.prevent="
+                                    modifiable &&
+                                    deposer(`${j + 1}-${ligne.debut}`)
+                                "
                             >
                                 <template
                                     v-for="seance in seancesDe(
@@ -111,7 +156,34 @@ const legende = computed(() => [
                                                 seance.id === surlignee
                                                     ? 'ring-2 ring-erreur ring-offset-1'
                                                     : '',
+                                                modifiable
+                                                    ? 'cursor-grab hover:ring-2 hover:ring-primary/40 active:cursor-grabbing'
+                                                    : '',
+                                                glissee?.id === seance.id
+                                                    ? 'opacity-50'
+                                                    : '',
                                             ]"
+                                            :draggable="modifiable"
+                                            :role="
+                                                modifiable
+                                                    ? 'button'
+                                                    : undefined
+                                            "
+                                            :tabindex="
+                                                modifiable ? 0 : undefined
+                                            "
+                                            @dragstart="
+                                                commencer(seance, $event)
+                                            "
+                                            @dragend="terminer"
+                                            @click="
+                                                modifiable &&
+                                                emit('choisir', seance)
+                                            "
+                                            @keydown.enter="
+                                                modifiable &&
+                                                emit('choisir', seance)
+                                            "
                                         >
                                             <p
                                                 class="font-bold text-foreground"

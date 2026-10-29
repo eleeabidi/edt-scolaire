@@ -6,9 +6,11 @@ use App\Enums\StatutCompte;
 use App\Enums\StatutEmploi;
 use App\Exceptions\GenerationImpossible;
 use App\Models\EmploiDuTemps;
+use App\Models\Salle;
 use App\Models\User;
 use App\Services\GenerateurEmploiDuTemps;
 use App\Services\GrilleEmploiDuTemps;
+use App\Services\PlanningEmploiDuTemps;
 use App\Support\CreneauHoraire;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -79,6 +81,7 @@ class EmploiDuTempsController extends Controller
             'seances' => $seances,
             'totalMinutes' => GrilleEmploiDuTemps::totalMinutes($seances),
             'nbConflits' => count($emploi->detecterConflits()),
+            'sallesPossibles' => Inertia::optional(fn () => $this->sallesPossibles($emploi, $request->integer('salles_pour'))),
             'surlignee' => $request->integer('seance') ?: null, // « Voir dans la grille » depuis la page des conflits
         ]);
     }
@@ -151,6 +154,25 @@ class EmploiDuTempsController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => "L'emploi du temps {$annee} a été généré (brouillon)."]);
 
         return to_route('emploi.index', ['annee' => $annee]);
+    }
+
+    /**
+     * « Changer la salle de la séance » : la salle actuelle, puis les salles en service, libres sur ce créneau,
+     * du bon type et assez grandes pour la classe.
+     *
+     * @return list<array{id: int, nom: string}>
+     */
+    private function sallesPossibles(EmploiDuTemps $emploi, int $seanceId): array
+    {
+        $seance = $emploi->seances()->find($seanceId);
+
+        if ($seance === null) {
+            return [];
+        }
+
+        $salles = [$seance->salle()->firstOrFail(), ...(new PlanningEmploiDuTemps($emploi))->sallesLibres($seance)];
+
+        return array_map(fn (Salle $s) => ['id' => $s->id, 'nom' => $s->nom], $salles);
     }
 
     /**
