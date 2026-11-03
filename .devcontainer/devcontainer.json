@@ -1,0 +1,30 @@
+{
+    // Démo en ligne avec GitHub Codespaces : l'application s'installe et démarre toute seule.
+    "name": "EDT Scolaire",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "26"
+        },
+        "ghcr.io/devcontainers/features/github-cli:1": {}
+    },
+    "forwardPorts": [8000, 8080],
+    "portsAttributes": {
+        "8000": {
+            "label": "Application",
+            "onAutoForward": "notify"
+        },
+        "8080": {
+            "label": "Reverb (temps réel)",
+            "onAutoForward": "silent"
+        }
+    },
+    // La plus petite machine (2 cœurs) pour consommer le moins possible du quota gratuit
+    "hostRequirements": {
+        "cpus": 2
+    },
+    "postCreateCommand": "bash .devcontainer/post-create.sh",
+    "postStartCommand": "bash .devcontainer/post-start.sh"
+}

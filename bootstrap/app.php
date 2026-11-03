@@ -19,6 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Démo en ligne (Codespaces) : le proxy reçoit le https, l'application doit le savoir
+        // pour générer ses liens et ses fichiers CSS/JS en https
+        $middleware->trustProxies(at: '*');
+
         $middleware->web(append: [
             EnsureUserIsActive::class,
             HandleInertiaRequests::class,
