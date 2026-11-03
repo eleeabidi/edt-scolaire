@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { CalendarDays, Check, TriangleAlert } from '@lucide/vue';
+import {
+    CalendarDays,
+    Check,
+    Download,
+    FileSpreadsheet,
+    FileText,
+    TriangleAlert,
+} from '@lucide/vue';
 import { computed, ref } from 'vue';
 import ConfirmationDialog from '@/components/ConfirmationDialog.vue';
 import GrilleSemaine from '@/components/emploi/GrilleSemaine.vue';
@@ -18,7 +25,7 @@ import InputError from '@/components/InputError.vue';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { formatDuree, formatHeure } from '@/lib/format';
-import { conflits, generer, index, publier } from '@/routes/emploi';
+import { conflits, exporter, generer, index, publier } from '@/routes/emploi';
 import { deplacer, salle as changerSalle } from '@/routes/seances';
 import type { LigneGrille, SeanceGrille, VueGrille } from '@/types';
 
@@ -195,9 +202,92 @@ function lancerPublication() {
     );
 }
 
+// --- Exporter (US18) : seulement l'emploi du temps publié, l'affichage en cours ---
+const exportOuvert = ref(false);
+const formatExport = ref<'pdf' | 'excel'>('pdf');
+const exportEnCours = ref(false);
+const erreurExport = ref<string | null>(null);
+
+const formats = [
+    {
+        valeur: 'pdf',
+        libelle: 'PDF',
+        detail: 'Prêt à imprimer',
+        icone: FileText,
+        couleur: 'bg-erreur/15 text-erreur',
+    },
+    {
+        valeur: 'excel',
+        libelle: 'Excel',
+        detail: 'Tableau modifiable',
+        icone: FileSpreadsheet,
+        couleur: 'bg-succes/15 text-[#1F8A6B]',
+    },
+] as const;
+
+const texteExport = computed(() => {
+    const sujet = {
+        classe: `de la classe ${nomChoisi.value}`,
+        enseignant: `de l'enseignant ${nomChoisi.value}`,
+        salle: `de la salle ${nomChoisi.value}`,
+    }[par.value];
+
+    return `Emploi du temps ${sujet}, année scolaire ${props.emploi?.annee}. Choisissez le format du fichier.`;
+});
+
+function ouvrirExport() {
+    formatExport.value = 'pdf';
+    erreurExport.value = null;
+    exportOuvert.value = true;
+}
+
+async function telecharger() {
+    if (!props.emploi) {
+        return;
+    }
+
+    exportEnCours.value = true;
+    erreurExport.value = null;
+
+    try {
+        const reponse = await fetch(
+            exporter.url(props.emploi.id, {
+                query: {
+                    format: formatExport.value,
+                    par: par.value,
+                    id: choix.value,
+                },
+            }),
+            { headers: { Accept: 'application/json' } },
+        );
+
+        if (!reponse.ok) {
+            throw new Error();
+        }
+
+        // Lancer le téléchargement du fichier reçu
+        const nom =
+            /filename="?([^";]+)"?/.exec(
+                reponse.headers.get('Content-Disposition') ?? '',
+            )?.[1] ?? 'emploi-du-temps';
+        const lien = document.createElement('a');
+        lien.href = URL.createObjectURL(await reponse.blob());
+        lien.download = nom;
+        lien.click();
+        URL.revokeObjectURL(lien.href);
+        exportOuvert.value = false;
+    } catch {
+        // 4a : la génération du fichier a échoué → on peut choisir un format et réessayer
+        erreurExport.value =
+            "Le fichier n'a pas pu être généré. Choisissez un format et réessayez.";
+    } finally {
+        exportEnCours.value = false;
+    }
+}
+
 const sousTitre = computed(() =>
     props.emploi?.statut === 'publie'
-        ? `${props.ecoleNom} · année scolaire ${props.emploi.annee}. L'emploi du temps est publié : chaque enseignant voit le sien.`
+        ? `${props.ecoleNom} · année scolaire ${props.emploi.annee}. L'emploi du temps est publié : vous pouvez l'exporter en PDF ou en Excel.`
         : props.emploi
           ? `${props.ecoleNom} · année scolaire ${props.emploi.annee}. Glissez une séance pour la déplacer, cliquez dessus pour changer la salle.`
           : `${props.ecoleNom} · générez l'emploi du temps de toutes les classes de l'école.`,
@@ -256,6 +346,13 @@ const selectClasses =
             <Link :href="conflits(emploi.id)">
                 Conflits ({{ nbConflits ?? 0 }})
             </Link>
+        </Button>
+        <Button
+            v-if="emploi && emploi.statut === 'publie'"
+            @click="ouvrirExport"
+        >
+            <Download />
+            Exporter
         </Button>
         <Button
             v-if="emploi && emploi.statut === 'brouillon'"
@@ -540,6 +637,69 @@ const selectClasses =
                     </Button>
                 </DialogFooter>
             </form>
+        </DialogContent>
+    </Dialog>
+
+    <!-- F17 : exporter l'emploi du temps -->
+    <Dialog v-model:open="exportOuvert">
+        <DialogContent>
+            <div
+                class="flex size-14 items-center justify-center rounded-2xl bg-violet-clair text-primary"
+            >
+                <Download class="size-5" />
+            </div>
+            <DialogHeader>
+                <DialogTitle>Exporter l'emploi du temps</DialogTitle>
+                <DialogDescription class="leading-relaxed">
+                    {{ texteExport }}
+                </DialogDescription>
+            </DialogHeader>
+            <div
+                class="grid gap-3 sm:grid-cols-2"
+                role="radiogroup"
+                aria-label="Format du fichier"
+            >
+                <label
+                    v-for="f in formats"
+                    :key="f.valeur"
+                    class="flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 transition-colors"
+                    :class="
+                        formatExport === f.valeur
+                            ? 'border-primary bg-violet-clair/50'
+                            : 'border-bordure'
+                    "
+                >
+                    <input
+                        v-model="formatExport"
+                        type="radio"
+                        name="format"
+                        :value="f.valeur"
+                        class="size-4 accent-primary"
+                    />
+                    <span
+                        class="flex size-10 shrink-0 items-center justify-center rounded-lg"
+                        :class="f.couleur"
+                    >
+                        <component :is="f.icone" class="size-5" />
+                    </span>
+                    <span>
+                        <span class="block font-bold">{{ f.libelle }}</span>
+                        <span class="block text-xs text-muted-foreground">
+                            {{ f.detail }}
+                        </span>
+                    </span>
+                </label>
+            </div>
+            <InputError :message="erreurExport ?? undefined" />
+            <DialogFooter class="gap-3">
+                <Button variant="outline" @click="exportOuvert = false">
+                    Annuler
+                </Button>
+                <Button :disabled="exportEnCours" @click="telecharger">
+                    <Spinner v-if="exportEnCours" />
+                    Télécharger
+                </Button>
+            </DialogFooter>
         </DialogContent>
     </Dialog>
 

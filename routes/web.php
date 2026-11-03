@@ -75,6 +75,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('emploi-du-temps/generer', [EmploiDuTempsController::class, 'generer'])->name('emploi.generer');
         Route::get('emploi-du-temps/{emploi}/conflits', [EmploiDuTempsController::class, 'conflits'])->name('emploi.conflits');
         Route::post('emploi-du-temps/{emploi}/publier', [EmploiDuTempsController::class, 'publier'])->name('emploi.publier');
+        // Sprint 4 : exporter l'emploi du temps publié (PDF ou Excel)
+        Route::get('emploi-du-temps/{emploi}/exporter', [EmploiDuTempsController::class, 'exporterEmploiDuTemps'])->name('emploi.exporter');
 
         // Modifier une séance : la déplacer (glisser-déposer) ou changer sa salle
         Route::patch('seances/{seance}/deplacer', [SeanceController::class, 'deplacer'])->name('seances.deplacer');

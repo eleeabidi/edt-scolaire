@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\StatutEmploi;
+use App\Services\ExportEmploiDuTemps;
+use App\Services\GrilleEmploiDuTemps;
 use App\Services\PlanningEmploiDuTemps;
 use Database\Factories\EmploiDuTempsFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -12,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Emploi du temps d'une école pour une année scolaire. Il contient ses séances (composition 1 — 1..*).
@@ -73,6 +76,17 @@ class EmploiDuTemps extends Model
     public function verifierDisponibilite(Seance $seance, Horaire $horaire, ?Salle $salle = null): ?string
     {
         return (new PlanningEmploiDuTemps($this))->verifierDeplacement($seance, $horaire, $salle)['cause'];
+    }
+
+    /**
+     * US18 — Le fichier PDF ou Excel de l'emploi du temps, pour une classe, un enseignant ou une salle.
+     *
+     * @param  'pdf'|'excel'  $format
+     * @param  key-of<GrilleEmploiDuTemps::FILTRES>  $filtre
+     */
+    public function exporter(string $format, string $filtre, int $id): Response
+    {
+        return (new ExportEmploiDuTemps($this, $filtre, $id))->telecharger($format);
     }
 
     /**

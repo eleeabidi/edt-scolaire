@@ -9,6 +9,7 @@ use App\Models\EmploiDuTemps;
 use App\Models\Salle;
 use App\Models\User;
 use App\Notifications\EmploiDuTempsPublieNotification;
+use App\Services\ExportEmploiDuTemps;
 use App\Services\GenerateurEmploiDuTemps;
 use App\Services\GrilleEmploiDuTemps;
 use App\Services\PlanningEmploiDuTemps;
@@ -21,6 +22,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
 /**
@@ -127,6 +129,42 @@ class EmploiDuTempsController extends Controller
             : ['type' => 'warning', 'message' => "L'emploi du temps {$emploi->annee_scolaire} est publié, mais {$echecs} email(s) n'ont pas pu être envoyés."]);
 
         return back();
+    }
+
+    /**
+     * US18 — Exporter l'emploi du temps publié en PDF ou en Excel (T18.2 à T18.4) : l'affichage en cours
+     * (?format=pdf|excel&par=classe|enseignant|salle&id=3). Un brouillon ne s'exporte pas.
+     */
+    public function exporterEmploiDuTemps(Request $request, EmploiDuTemps $emploi): SymfonyResponse
+    {
+        $ecole = $request->user()->ecole;
+        abort_unless($emploi->ecole_id === $ecole->id, 403);
+        abort_unless($emploi->estPublie(), 403, 'Seul un emploi du temps publié peut être exporté.');
+
+        $request->validate([
+            'format' => ['required', Rule::in(ExportEmploiDuTemps::FORMATS)],
+            'par' => ['required', Rule::in(array_keys(GrilleEmploiDuTemps::FILTRES))],
+            'id' => ['required', 'integer'],
+        ]);
+
+        $format = $request->input('format') === 'excel' ? 'excel' : 'pdf';
+        $id = $request->integer('id');
+
+        // La classe, l'enseignant ou la salle doit être de l'école du directeur
+        [$par, $requete] = match ($request->input('par')) {
+            'enseignant' => ['enseignant', $ecole->enseignants()],
+            'salle' => ['salle', $ecole->salles()],
+            default => ['classe', $ecole->classes()],
+        };
+        abort_unless($requete->whereKey($id)->exists(), 404);
+
+        // 4a : la génération du fichier échoue → message d'erreur, le directeur peut réessayer
+        try {
+            return $emploi->exporter($format, $par, $id);
+        } catch (Throwable $e) {
+            report($e);
+            abort(500, "Le fichier n'a pas pu être généré. Choisissez un format et réessayez.");
+        }
     }
 
     /**
