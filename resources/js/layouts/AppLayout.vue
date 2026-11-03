@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { LogOut, Menu } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import AppNav from '@/components/AppNav.vue';
+import OngletsEnseignant from '@/components/OngletsEnseignant.vue';
 import {
     Sheet,
     SheetContent,
@@ -19,6 +20,10 @@ const { titre = '' } = defineProps<{
 }>();
 
 const menuOuvert = ref(false);
+
+// Sprint 4 : sur téléphone, l'enseignant navigue avec la barre d'onglets du bas (pas de menu coulissant)
+const page = usePage();
+const enseignant = computed(() => page.props.auth.user.role === 'enseignant');
 </script>
 
 <template>
@@ -34,7 +39,9 @@ const menuOuvert = ref(false);
         <header
             class="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-bordure bg-white px-4 lg:hidden"
         >
+            <span v-if="enseignant" class="size-10" />
             <button
+                v-else
                 type="button"
                 class="flex size-10 items-center justify-center rounded-xl bg-fond"
                 aria-label="Ouvrir le menu"
@@ -65,13 +72,15 @@ const menuOuvert = ref(false);
         </Sheet>
 
         <!-- Contenu de la page -->
-        <main class="lg:pl-66">
+        <main class="lg:pl-66" :class="enseignant ? 'pb-20 lg:pb-0' : ''">
             <div
                 class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-12 lg:py-10"
             >
                 <slot />
             </div>
         </main>
+
+        <OngletsEnseignant v-if="enseignant" />
 
         <Toaster position="top-right" rich-colors />
     </div>

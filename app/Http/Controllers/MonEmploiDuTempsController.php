@@ -9,30 +9,42 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * « Mon emploi du temps » (enseignant) : ses séances de la semaine, en lecture seule.
- * T17.3 — Seul un emploi du temps publié est visible : un brouillon reste caché aux enseignants.
+ * US19 — « Mon emploi du temps » (enseignant) : ses séances dans l'emploi du temps publié de son école
+ * pour l'année scolaire en cours, en vue semaine ou en vue jour (T19.1 à T19.3).
+ * T17.3 — Un emploi du temps au statut brouillon reste caché aux enseignants.
  */
 class MonEmploiDuTempsController extends Controller
 {
-    public function __invoke(Request $request): Response
+    /**
+     * ?vue=semaine (par défaut) ou ?vue=jour&jour=1 (lundi) à 6 (samedi).
+     */
+    public function consulterMonEmploiDuTemps(Request $request): Response
     {
         $enseignant = $request->user();
-        $annees = EmploiDuTempsController::anneesScolaires();
+        $vue = $request->query('vue') === 'jour' ? 'jour' : 'semaine';
 
-        // L'emploi du temps publié de l'année en cours, sinon le plus récent publié
+        // Jour choisi, sinon aujourd'hui (le dimanche : lundi)
+        $jour = $request->integer('jour');
+        if ($jour < 1 || $jour > 6) {
+            $jour = now()->dayOfWeekIso === 7 ? 1 : now()->dayOfWeekIso;
+        }
+
         $emploi = $enseignant->ecole?->emploisDuTemps()
+            ->where('annee_scolaire', EmploiDuTempsController::anneesScolaires()[0])
             ->where('statut', StatutEmploi::Publie)
-            ->orderByRaw('annee_scolaire = ? desc', [$annees[0]])
-            ->orderByDesc('annee_scolaire')
             ->first();
 
+        $proprietes = ['prenom' => $enseignant->prenom, 'vue' => $vue, 'jour' => $jour];
+
+        // 2a : aucun emploi du temps publié pour l'année scolaire en cours
         if ($emploi === null) {
-            return Inertia::render('mon-emploi-du-temps/Index', ['emploi' => null]);
+            return Inertia::render('mon-emploi-du-temps/Index', [...$proprietes, 'emploi' => null]);
         }
 
         $seances = GrilleEmploiDuTemps::seances($emploi, 'enseignant', $enseignant->id);
 
         return Inertia::render('mon-emploi-du-temps/Index', [
+            ...$proprietes,
             'emploi' => ['annee' => $emploi->annee_scolaire, 'ecole' => $emploi->ecole->nom],
             ...GrilleEmploiDuTemps::structure(),
             'seances' => $seances,

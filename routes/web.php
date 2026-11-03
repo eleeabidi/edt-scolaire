@@ -83,8 +83,8 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('seances/{seance}/salle', [SeanceController::class, 'changerSalle'])->name('seances.salle');
     });
 
-    // Sprint 3 : l'enseignant consulte son emploi du temps (seulement s'il est publié)
-    Route::get('mon-emploi-du-temps', MonEmploiDuTempsController::class)
+    // Sprints 3 et 4 : l'enseignant consulte son emploi du temps (seulement s'il est publié), vue semaine ou jour
+    Route::get('mon-emploi-du-temps', [MonEmploiDuTempsController::class, 'consulterMonEmploiDuTemps'])
         ->middleware('role:enseignant')
         ->name('mon-emploi.index');
 
