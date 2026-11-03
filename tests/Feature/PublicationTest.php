@@ -171,7 +171,7 @@ class PublicationTest extends TestCase
             ->assertInertiaFlash('toast.message', 'La séance a été déplacée. Karim Jaziri a été prévenu(e) par email.');
 
         Notification::assertSentTo($this->enseignant('Karim'), SeanceModifieeNotification::class, function (SeanceModifieeNotification $n) {
-            return str_starts_with($n->modification, 'Votre séance de ') && str_contains($n->modification, ' en 3e année A a été déplacée du ');
+            return str_starts_with($n->modification, 'Votre séance avec la 3e année A passe du ');
         });
         Notification::assertCount(1);
     }

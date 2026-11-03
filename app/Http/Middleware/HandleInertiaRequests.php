@@ -50,6 +50,10 @@ class HandleInertiaRequests extends Middleware
             'inscriptionsEnAttente' => fn () => $request->user()?->isAdmin()
                 ? User::where('role', Role::Directeur)->where('statut', StatutCompte::EnAttente)->count()
                 : 0,
+            // Sprint 4 : nombre de notifications non lues de l'enseignant (pastille de l'onglet « Notifications »)
+            'notificationsNonLues' => fn () => $request->user()?->isEnseignant()
+                ? $request->user()->notificationsRecues()->where('lue', false)->count()
+                : 0,
         ];
     }
 }

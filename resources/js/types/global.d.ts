@@ -20,6 +20,7 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             inscriptionsEnAttente: number;
+            notificationsNonLues: number;
             echecEnvoi: { id: number; nom: string } | null;
             [key: string]: unknown;
         };

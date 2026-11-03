@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { CalendarDays, UserRound } from '@lucide/vue';
+import { Bell, CalendarDays, UserRound } from '@lucide/vue';
 import type { LucideIcon } from '@lucide/vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
+import { useNotificationsEnDirect } from '@/composables/useNotificationsEnDirect';
 import { index as monEmploiDuTemps } from '@/routes/mon-emploi';
+import { index as notifications } from '@/routes/notifications';
 import { edit as profil } from '@/routes/profile';
 
 // Espace enseignant (téléphone) : barre d'onglets en bas de l'écran (maquettes 27 à 29)
@@ -11,12 +13,20 @@ type Onglet = {
     titre: string;
     href: ReturnType<typeof profil>;
     icone: LucideIcon;
+    pastille?: boolean; // nombre de notifications non lues
 };
 
 const { isCurrentOrParentUrl } = useCurrentUrl();
+const { nonLues } = useNotificationsEnDirect();
 
 const onglets: Onglet[] = [
     { titre: 'Emploi du temps', href: monEmploiDuTemps(), icone: CalendarDays },
+    {
+        titre: 'Notifications',
+        href: notifications(),
+        icone: Bell,
+        pastille: true,
+    },
     { titre: 'Profil', href: profil(), icone: UserRound },
 ];
 </script>
@@ -40,7 +50,16 @@ const onglets: Onglet[] = [
                 isCurrentOrParentUrl(onglet.href) ? 'page' : undefined
             "
         >
-            <component :is="onglet.icone" class="size-6" />
+            <span class="relative">
+                <component :is="onglet.icone" class="size-6" />
+                <span
+                    v-if="onglet.pastille && nonLues > 0"
+                    class="absolute -top-1.5 -right-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-erreur px-1 text-[11px] font-bold text-white"
+                    :aria-label="`${nonLues} non lues`"
+                >
+                    {{ nonLues }}
+                </span>
+            </span>
             {{ onglet.titre }}
         </Link>
     </nav>

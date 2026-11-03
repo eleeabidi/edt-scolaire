@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Enums\StatutCompte;
 use App\Enums\StatutEmploi;
+use App\Enums\TypeNotification;
 use App\Exceptions\GenerationImpossible;
 use App\Models\EmploiDuTemps;
+use App\Models\Notification;
 use App\Models\Salle;
 use App\Models\User;
 use App\Notifications\EmploiDuTempsPublieNotification;
@@ -116,6 +118,9 @@ class EmploiDuTempsController extends Controller
 
         $echecs = 0;
         foreach ($emploi->ecole->enseignants()->where('statut', StatutCompte::Actif)->get() as $enseignant) {
+            // Sprint 4 : notification enregistrée et diffusée en temps réel, en plus de l'email
+            Notification::envoyer($enseignant, TypeNotification::Publication, EmploiDuTempsPublieNotification::message($emploi));
+
             try {
                 $enseignant->notify(new EmploiDuTempsPublieNotification($emploi));
             } catch (Throwable $e) {

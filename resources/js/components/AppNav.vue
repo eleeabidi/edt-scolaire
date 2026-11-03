@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
 import {
+    Bell,
     BriefcaseBusiness,
     CalendarDays,
     Clock,
@@ -18,6 +19,7 @@ import type { LucideIcon } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
+import { useNotificationsEnDirect } from '@/composables/useNotificationsEnDirect';
 import { dashboard, home, logout } from '@/routes';
 import { index as classes } from '@/routes/classes';
 import { index as directeurs } from '@/routes/directeurs';
@@ -26,6 +28,7 @@ import { index as disponibilites } from '@/routes/disponibilites';
 import { index as enseignants } from '@/routes/enseignants';
 import { index as importer } from '@/routes/import';
 import { index as monEmploiDuTemps } from '@/routes/mon-emploi';
+import { index as notifications } from '@/routes/notifications';
 import { index as programme } from '@/routes/programme';
 import { edit as profil } from '@/routes/profile';
 import { index as regles } from '@/routes/regles';
@@ -42,6 +45,7 @@ const emit = defineEmits<{ navigation: [] }>();
 
 const page = usePage();
 const { isCurrentOrParentUrl } = useCurrentUrl();
+const { nonLues } = useNotificationsEnDirect();
 
 // Le menu dépend du rôle de l'utilisateur connecté
 const liens = computed<Lien[]>(() => {
@@ -98,13 +102,21 @@ const liens = computed<Lien[]>(() => {
         );
     }
 
-    // Sprint 3 : l'enseignant consulte son emploi du temps publié
+    // Sprints 3 et 4 : l'enseignant consulte son emploi du temps publié et ses notifications
     if (role === 'enseignant') {
-        items.push({
-            titre: 'Mon emploi du temps',
-            href: monEmploiDuTemps(),
-            icone: Clock,
-        });
+        items.push(
+            {
+                titre: 'Mon emploi du temps',
+                href: monEmploiDuTemps(),
+                icone: Clock,
+            },
+            {
+                titre: 'Notifications',
+                href: notifications(),
+                icone: Bell,
+                badge: nonLues.value,
+            },
+        );
     }
 
     items.push({ titre: 'Mon profil', href: profil(), icone: UserRound });

@@ -75,6 +75,16 @@ export type VueGrille = 'classe' | 'enseignant' | 'salle';
 
 export type LigneGrille = { debut: string; fin: string; midi: boolean };
 
+// Sprint 4 — Notification d'un enseignant (« Mes notifications »)
+export type NotificationEnseignant = {
+    id: number;
+    type: 'publication' | 'modification';
+    titre: string; // « Séance modifiée » ou « Emploi du temps publié »
+    message: string;
+    date: string; // « Aujourd'hui, 09:40 », « Hier, 16:15 », « 05 oct. 2026 »
+    lue: boolean;
+};
+
 export type SeanceGrille = {
     id: number;
     case: string; // « jour-HH:MM » du créneau

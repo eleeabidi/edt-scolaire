@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TypeNotification;
 use App\Models\Horaire;
+use App\Models\Notification;
 use App\Models\Salle;
 use App\Models\Seance;
 use App\Notifications\SeanceModifieeNotification;
@@ -42,7 +44,7 @@ class SeanceController extends Controller
         $seance->deplacer($horaire, $verification['decalage']);
 
         // 3a : emploi du temps publié → l'enseignant de la séance est prévenu
-        $this->prevenir($seance, 'La séance a été déplacée.', "Votre séance de {$this->matieres($seance)} en {$seance->classe->nom} a été déplacée du {$avant} au {$this->quand($seance)}.");
+        $this->prevenir($seance, 'La séance a été déplacée.', "Votre séance avec la {$seance->classe->nom} passe du {$avant} au {$this->quand($seance)}.");
 
         return back();
     }
@@ -69,7 +71,7 @@ class SeanceController extends Controller
             }
 
             $seance->changerSalle($salle);
-            $this->prevenir($seance, 'La salle de la séance a été changée.', "Votre séance de {$this->matieres($seance)} en {$seance->classe->nom} du {$this->quand($seance)} a lieu désormais dans la salle {$salle->nom}.");
+            $this->prevenir($seance, 'La salle de la séance a été changée.', "Votre séance avec la {$seance->classe->nom} du {$this->quand($seance)} a lieu désormais dans la salle {$salle->nom}.");
 
             return back();
         }
@@ -92,6 +94,9 @@ class SeanceController extends Controller
 
         $enseignant = $seance->enseignant()->firstOrFail();
 
+        // Sprint 4 : notification enregistrée et diffusée en temps réel, en plus de l'email
+        Notification::envoyer($enseignant, TypeNotification::Modification, $modification);
+
         try {
             $enseignant->notify(new SeanceModifieeNotification($modification));
             Inertia::flash('toast', ['type' => 'success', 'message' => "{$succes} {$enseignant->name} a été prévenu(e) par email."]);
@@ -111,14 +116,6 @@ class SeanceController extends Controller
         return mb_strtolower($seance->horaire()->firstOrFail()->jour->label()).' '
             .CreneauHoraire::lisible(CreneauHoraire::minutes((string) $seance->matieres->min('heure_debut'))).' – '
             .CreneauHoraire::lisible(CreneauHoraire::minutes((string) $seance->matieres->max('heure_fin')));
-    }
-
-    /**
-     * « Français » ou « Mathématiques, Éveil scientifique »
-     */
-    private function matieres(Seance $seance): string
-    {
-        return $seance->matieres()->with('matiere')->orderBy('heure_debut')->get()->map(fn ($m) => $m->matiere->nom)->join(', ');
     }
 
     /**

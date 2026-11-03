@@ -3,6 +3,7 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import { LogOut, Menu } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import AppNav from '@/components/AppNav.vue';
+import NotificationsEnDirect from '@/components/NotificationsEnDirect.vue';
 import OngletsEnseignant from '@/components/OngletsEnseignant.vue';
 import {
     Sheet,
@@ -80,7 +81,10 @@ const enseignant = computed(() => page.props.auth.user.role === 'enseignant');
             </div>
         </main>
 
-        <OngletsEnseignant v-if="enseignant" />
+        <template v-if="enseignant">
+            <OngletsEnseignant />
+            <NotificationsEnDirect />
+        </template>
 
         <Toaster position="top-right" rich-colors />
     </div>

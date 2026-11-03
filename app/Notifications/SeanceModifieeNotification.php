@@ -12,7 +12,7 @@ use Illuminate\Notifications\Notification;
 class SeanceModifieeNotification extends Notification
 {
     /**
-     * @param  string  $modification  ex. « Votre séance de Français en 3e année A a été déplacée du lundi 8 h – 9 h 55 au jeudi 13 h – 14 h 55. »
+     * @param  string  $modification  ex. « Votre séance avec la 3e année B passe du mardi 14 h – 14 h 55 au jeudi 8 h – 9 h. »
      */
     public function __construct(public string $modification) {}
 

@@ -27,8 +27,18 @@ class EmploiDuTempsPublieNotification extends Notification
         return (new MailMessage)
             ->subject("L'emploi du temps {$this->emploi->annee_scolaire} est publié")
             ->greeting("Bonjour {$notifiable->prenom},")
-            ->line("Le directeur de l'école {$this->emploi->ecole->nom} vient de publier l'emploi du temps de l'année scolaire {$this->emploi->annee_scolaire}.")
-            ->line('Vous pouvez consulter vos séances de la semaine dans « Mon emploi du temps ».')
+            ->line(self::message($this->emploi))
             ->action('Voir mon emploi du temps', route('mon-emploi.index'));
+    }
+
+    /**
+     * Sprint 4 (maquette 28) : « L'emploi du temps 2026-2027 de l'école Ibn Khaldoun est publié. Vous pouvez consulter vos séances. »
+     * Le mot « École » au début du nom n'est pas répété (« de l'école Les Jasmins »).
+     */
+    public static function message(EmploiDuTemps $emploi): string
+    {
+        $ecole = preg_replace('/^École\s+/u', '', $emploi->ecole->nom);
+
+        return "L'emploi du temps {$emploi->annee_scolaire} de l'école {$ecole} est publié. Vous pouvez consulter vos séances.";
     }
 }

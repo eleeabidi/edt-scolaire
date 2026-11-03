@@ -141,4 +141,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Seance::class, 'enseignant_id');
     }
+
+    /**
+     * Sprint 4 — Les notifications que l'enseignant reçoit (« notifications() » est déjà utilisé par Laravel pour les emails).
+     *
+     * @return HasMany<Notification, $this>
+     */
+    public function notificationsRecues(): HasMany
+    {
+        return $this->hasMany(Notification::class, 'enseignant_id');
+    }
 }
