@@ -4,6 +4,7 @@ import {
     Bell,
     BriefcaseBusiness,
     CalendarDays,
+    CalendarX2,
     Clock,
     DoorOpen,
     House,
@@ -29,6 +30,8 @@ import { index as enseignants } from '@/routes/enseignants';
 import { index as importer } from '@/routes/import';
 import { index as monEmploiDuTemps } from '@/routes/mon-emploi';
 import { index as notifications } from '@/routes/notifications';
+import { index as demandes } from '@/routes/demandes';
+import { index as mesDemandes } from '@/routes/mes-demandes';
 import { index as programme } from '@/routes/programme';
 import { edit as profil } from '@/routes/profile';
 import { index as regles } from '@/routes/regles';
@@ -99,6 +102,12 @@ const liens = computed<Lien[]>(() => {
                 href: emploiDuTemps(),
                 icone: Clock,
             },
+            // Sprint 4 : traiter les demandes d'indisponibilité
+            {
+                titre: "Demandes d'indisponibilité",
+                href: demandes(),
+                icone: CalendarX2,
+            },
         );
     }
 
@@ -116,6 +125,7 @@ const liens = computed<Lien[]>(() => {
                 icone: Bell,
                 badge: nonLues.value,
             },
+            { titre: 'Demandes', href: mesDemandes(), icone: CalendarX2 },
         );
     }
 

@@ -4,6 +4,7 @@ use App\Enums\Role;
 use App\Http\Controllers\AffectationController;
 use App\Http\Controllers\ClasseController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DemandeIndisponibiliteController;
 use App\Http\Controllers\DirecteurController;
 use App\Http\Controllers\DisponibiliteController;
 use App\Http\Controllers\EmploiDuTempsController;
@@ -76,6 +77,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('emploi-du-temps/generer', [EmploiDuTempsController::class, 'generer'])->name('emploi.generer');
         Route::get('emploi-du-temps/{emploi}/conflits', [EmploiDuTempsController::class, 'conflits'])->name('emploi.conflits');
         Route::post('emploi-du-temps/{emploi}/publier', [EmploiDuTempsController::class, 'publier'])->name('emploi.publier');
+        // Sprint 4 : traiter les demandes d'indisponibilité des enseignants de l'école
+        Route::get('demandes-indisponibilite', [DemandeIndisponibiliteController::class, 'consulterDemandes'])->name('demandes.index');
+        Route::patch('demandes-indisponibilite/{demande}/accepter', [DemandeIndisponibiliteController::class, 'accepterDemande'])->name('demandes.accepter');
+        Route::patch('demandes-indisponibilite/{demande}/refuser', [DemandeIndisponibiliteController::class, 'refuserDemande'])->name('demandes.refuser');
         // Sprint 4 : exporter l'emploi du temps publié (PDF ou Excel)
         Route::get('emploi-du-temps/{emploi}/exporter', [EmploiDuTempsController::class, 'exporterEmploiDuTemps'])->name('emploi.exporter');
 
@@ -93,6 +98,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('mes-notifications', [NotificationController::class, 'consulterNotifications'])
         ->middleware('role:enseignant')
         ->name('notifications.index');
+
+    // Sprint 4 : l'enseignant signale ses indisponibilités et suit leur statut
+    Route::middleware('role:enseignant')->group(function () {
+        Route::get('mes-demandes', [DemandeIndisponibiliteController::class, 'mesDemandes'])->name('mes-demandes.index');
+        Route::post('mes-demandes', [DemandeIndisponibiliteController::class, 'signalerIndisponibilite'])->name('mes-demandes.store');
+    });
 
     // Gérer les directeurs (Admin)
     Route::middleware('role:admin')->group(function () {

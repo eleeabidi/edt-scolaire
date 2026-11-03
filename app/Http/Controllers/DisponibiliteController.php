@@ -6,12 +6,10 @@ use App\Enums\Role;
 use App\Enums\StatutCompte;
 use App\Models\Affectation;
 use App\Models\Disponibilite;
-use App\Models\Horaire;
 use App\Models\User;
 use App\Support\Duree;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -34,13 +32,13 @@ class DisponibiliteController extends Controller
             ->get(['id', 'nom', 'prenom']);
 
         $choisi = $enseignants->firstWhere('id', $request->integer('enseignant')) ?? $enseignants->first();
-        $creneaux = collect($this->creneaux());
+        $creneaux = collect(Disponibilite::creneaux());
 
         $indisponibles = [];
         $minutesDisponibles = 0;
 
         if ($choisi) {
-            $disponibles = $this->clesDisponibles($choisi);
+            $disponibles = Disponibilite::clesDisponibles($choisi);
 
             foreach ($creneaux as $creneau) {
                 if ($disponibles === null || in_array($creneau['cle'], $disponibles, true)) {
@@ -77,7 +75,7 @@ class DisponibiliteController extends Controller
             'confirme' => ['sometimes', 'boolean'],
         ]);
 
-        $creneaux = collect($this->creneaux());
+        $creneaux = collect(Disponibilite::creneaux());
         $indisponibles = $request->collect('indisponibles')->unique();
 
         $inconnus = $indisponibles->diff($creneaux->pluck('cle'));
@@ -97,18 +95,10 @@ class DisponibiliteController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($enseignant, $indisponibles, $disponibles) {
-            $enseignant->disponibilites()->delete();
-
-            // Aucun créneau indisponible = disponible partout = aucune ligne
-            if ($indisponibles->isNotEmpty()) {
-                $enseignant->disponibilites()->createMany($disponibles->map(fn (array $c) => [
-                    'jour' => $c['jour'],
-                    'heure_debut' => $c['debut'],
-                    'heure_fin' => $c['fin'],
-                ])->values()->all());
-            }
-        });
+        Disponibilite::enregistrer($enseignant, array_values(array_filter(
+            array_column(Disponibilite::creneaux(), 'cle'),
+            fn (string $cle) => $indisponibles->contains($cle),
+        )));
 
         Inertia::flash('toast', $insuffisant
             ? ['type' => 'warning', 'message' => 'Disponibilités enregistrées, mais attention : '.Duree::format($minutesDisponibles)
@@ -116,57 +106,5 @@ class DisponibiliteController extends Controller
             : ['type' => 'success', 'message' => 'Les disponibilités ont été enregistrées.']);
 
         return back();
-    }
-
-    /**
-     * Les créneaux nationaux (table horaires), avec les heures qu'ils comptent :
-     * 08:00 → 09:55 compte 2 h (la récréation n'est pas déduite), 12:00 → 13:00 compte 1 h.
-     *
-     * @return array<int, array{cle: string, jour: int, debut: string, fin: string, minutes: int}>
-     */
-    private function creneaux(): array
-    {
-        return Horaire::query()
-            ->orderBy('jour')
-            ->orderBy('heure_debut')
-            ->get()
-            ->map(function (Horaire $h) {
-                $debut = substr($h->heure_debut, 0, 5);
-                $fin = substr($h->heure_fin, 0, 5);
-                $duree = $this->minutes($fin) - $this->minutes($debut);
-
-                return [
-                    'cle' => "{$h->jour->value}-{$debut}",
-                    'jour' => $h->jour->value,
-                    'debut' => $debut,
-                    'fin' => $fin,
-                    'minutes' => (int) round($duree / 60) * 60,
-                ];
-            })
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Les créneaux disponibles d'un enseignant, ou null s'il n'a aucune ligne (disponible partout).
-     *
-     * @return array<int, string>|null
-     */
-    private function clesDisponibles(User $enseignant): ?array
-    {
-        $lignes = Disponibilite::where('enseignant_id', $enseignant->id)->get();
-
-        if ($lignes->isEmpty()) {
-            return null;
-        }
-
-        return $lignes->map(fn (Disponibilite $d) => "{$d->jour->value}-".substr($d->heure_debut, 0, 5))->values()->all();
-    }
-
-    private function minutes(string $heure): int
-    {
-        [$h, $m] = array_map('intval', explode(':', $heure));
-
-        return $h * 60 + $m;
     }
 }

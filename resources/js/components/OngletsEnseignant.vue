@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Bell, CalendarDays, UserRound } from '@lucide/vue';
+import { Bell, CalendarDays, CalendarX2, UserRound } from '@lucide/vue';
 import type { LucideIcon } from '@lucide/vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { useNotificationsEnDirect } from '@/composables/useNotificationsEnDirect';
+import { index as mesDemandes } from '@/routes/mes-demandes';
 import { index as monEmploiDuTemps } from '@/routes/mon-emploi';
 import { index as notifications } from '@/routes/notifications';
 import { edit as profil } from '@/routes/profile';
@@ -27,6 +28,7 @@ const onglets: Onglet[] = [
         icone: Bell,
         pastille: true,
     },
+    { titre: 'Demandes', href: mesDemandes(), icone: CalendarX2 },
     { titre: 'Profil', href: profil(), icone: UserRound },
 ];
 </script>

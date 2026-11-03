@@ -32,6 +32,15 @@ export function libelleNiveau(niveau: number): string {
 }
 
 /**
+ * Statut d'une demande d'indisponibilité → couleur du badge (maquettes 29 et 30).
+ */
+export const statutsDemande = {
+    en_attente: 'bg-[#FFC94D]/25 text-[#8A6100]',
+    acceptee: 'bg-succes/15 text-[#1F8A6B]',
+    refusee: 'bg-erreur/15 text-[#C93D3D]',
+} as const;
+
+/**
  * Type de salle → libellé et couleur de l'étiquette (maquettes 17 et 19).
  */
 export const typesSalle = {

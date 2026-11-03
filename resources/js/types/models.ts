@@ -75,6 +75,19 @@ export type VueGrille = 'classe' | 'enseignant' | 'salle';
 
 export type LigneGrille = { debut: string; fin: string; midi: boolean };
 
+// Sprint 4 — Demande d'indisponibilité d'un enseignant
+export type StatutDemande = 'en_attente' | 'acceptee' | 'refusee';
+
+export type DemandeIndisponibilite = {
+    id: number;
+    jour: string; // « Mercredi »
+    horaire: string; // « 8 h – 9 h 55 »
+    motif: string;
+    dateEnvoi: string; // « 30/10/2026 »
+    statut: StatutDemande;
+    statutLibelle: string; // « En attente », « Acceptée », « Refusée »
+};
+
 // Sprint 4 — Notification d'un enseignant (« Mes notifications »)
 export type NotificationEnseignant = {
     id: number;

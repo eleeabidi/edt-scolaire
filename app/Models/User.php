@@ -151,4 +151,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Notification::class, 'enseignant_id');
     }
+
+    /**
+     * Sprint 4 — Les demandes d'indisponibilité que l'enseignant signale.
+     *
+     * @return HasMany<DemandeIndisponibilite, $this>
+     */
+    public function demandesIndisponibilite(): HasMany
+    {
+        return $this->hasMany(DemandeIndisponibilite::class, 'enseignant_id');
+    }
 }
